@@ -194,6 +194,70 @@ async function loadToday() {
   }));
 }
 
+async function loadRecent() {
+  const grid = $("#recent-grid");
+  const countLabel = $("#recent-count");
+  grid.innerHTML = '<p class="muted"><span class="loading"></span>loading recent edits & customs…</p>';
+  $("#recent-empty").classList.add("hidden");
+
+  let customRuns = [], editRuns = [];
+  try {
+    [customRuns, editRuns] = await Promise.all([
+      fetchRecentRuns(WORKFLOWS.custom, 10),
+      fetchRecentRuns(WORKFLOWS.edit, 10),
+    ]);
+  } catch (e) {
+    grid.innerHTML = "";
+    return; // fail silently — main flow shouldn't break
+  }
+
+  const all = [...customRuns, ...editRuns]
+    .filter((r) => r.status === "completed" && r.conclusion === "success")
+    .sort((a, b) => new Date(b.run_started_at) - new Date(a.run_started_at))
+    .slice(0, 8);
+
+  if (!all.length) {
+    grid.innerHTML = "";
+    $("#recent-empty").classList.remove("hidden");
+    countLabel.textContent = "";
+    return;
+  }
+
+  countLabel.textContent = `${all.length} most recent`;
+  grid.innerHTML = "";
+
+  await Promise.all(all.map(async (run) => {
+    const placeholder = document.createElement("div");
+    placeholder.className = "video-card";
+    const dateStr = new Date(run.run_started_at).toLocaleString(undefined, {
+      month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
+    });
+    const kind = run.name === "Custom Video" ? "custom" : "edit";
+    placeholder.innerHTML = `<div class="meta"><span class="loading"></span>loading ${kind} from ${dateStr}…</div>`;
+    grid.appendChild(placeholder);
+
+    try {
+      const arts = await fetchArtifacts(run.id);
+      if (!arts.length) {
+        placeholder.innerHTML = `<div class="meta muted small">⚠ artifact expired (${dateStr})</div>`;
+        return;
+      }
+      const art = arts[0];
+      const blob = await downloadArtifact(art.id);
+      const { url, metadata } = await extractVideo(blob);
+      const card = videoCard({
+        url,
+        format: `${kind} · ${formatFromArtifact(art.name)}`,
+        metadata: metadata || { title: dateStr },
+        runId: run.id,
+      });
+      placeholder.replaceWith(card);
+    } catch (e) {
+      placeholder.innerHTML = `<div class="meta muted small">⚠ ${escapeHtml(e.message)}</div>`;
+    }
+  }));
+}
+
 async function loadHistory() {
   const list = $("#history-list");
   list.innerHTML = '<p class="muted"><span class="loading"></span>loading…</p>';
@@ -358,7 +422,7 @@ window.addEventListener("DOMContentLoaded", async () => {
 
 async function refresh() {
   try {
-    await loadToday();
+    await Promise.all([loadToday(), loadRecent()]);
     if ($("#history-toggle").classList.contains("open")) {
       await loadHistory();
     }
