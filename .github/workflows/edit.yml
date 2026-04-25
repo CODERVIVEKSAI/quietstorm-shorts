@@ -18,7 +18,7 @@ on:
         type: string
 
 permissions:
-  contents: read
+  contents: write   # to commit edit_log.jsonl back
   actions: read
 
 jobs:
@@ -73,3 +73,17 @@ jobs:
           name: video-${{ github.event.inputs.format }}-${{ steps.runid.outputs.run_id }}
           path: output/${{ steps.runid.outputs.run_id }}/${{ github.event.inputs.format }}/
           retention-days: 7
+
+      - name: Record edit pattern for future learning
+        if: success()
+        run: |
+          python scripts/record_edit.py \
+            --format "$INPUT_FORMAT" \
+            --instruction "$INPUT_EDIT_PROMPT"
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if ! git diff --quiet data/edit_log.jsonl 2>/dev/null; then
+            git add data/edit_log.jsonl
+            git commit -m "log: record edit pattern ($INPUT_FORMAT)"
+            git push
+          fi

@@ -5,6 +5,7 @@ from pathlib import Path
 from lib import script as script_lib
 from lib import tts, visuals, assemble
 from lib.config import load_channel, voice_for, rate_for, OUTPUT_DIR
+from lib.preferences import preferences_block
 
 
 def build(format_name: str, prompt: str, run_id: str, edit_instruction: str | None = None,
@@ -19,6 +20,10 @@ def build(format_name: str, prompt: str, run_id: str, edit_instruction: str | No
     if edit_instruction and previous_script:
         spec = script_lib.edit(previous_script, edit_instruction, format_name)
     else:
+        # Inject learned preferences from past edits before generating
+        prefs = preferences_block(format_name)
+        if prefs:
+            prompt = prompt.rstrip() + "\n" + prefs + "\n"
         spec = script_lib.generate(prompt)
 
     (out_dir / "script.json").write_text(json.dumps(spec, indent=2))
