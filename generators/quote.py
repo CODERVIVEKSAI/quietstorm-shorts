@@ -69,7 +69,15 @@ Return JSON with keys:
 
 
 def _prompt_fallback() -> str:
-    return """Pick ONE original or classic quote (under 20 words). Modern wisdom > musty quotes.
+    used = []
+    if STATE_FILE.exists():
+        used_list = json.loads(STATE_FILE.read_text()).get("used", [])
+        # Just include the quote text, not the attribution, to keep prompt tight
+        used = [q.split("—")[0].strip() for q in used_list[-30:]]
+    avoid_block = ""
+    if used:
+        avoid_block = "\n\nAVOID THESE — they've been used recently, do NOT repeat:\n" + "\n".join(f"- {q}" for q in used)
+    return f"""Pick ONE original or classic quote (under 20 words). Modern wisdom > musty quotes.{avoid_block}
 
 TONE: Gen-Z / Gen-Alpha (16-25 yr old). Self-aware, fast-paced, modern internet humor.
 Confident not preachy. NO cringe ("hustle culture", "grind set"). NO dead slang.
@@ -85,6 +93,17 @@ Return JSON with keys:
 """
 
 
+def _record_used(text: str):
+    """Append a quote to STATE_FILE so future runs don't repeat it."""
+    used = []
+    if STATE_FILE.exists():
+        used = json.loads(STATE_FILE.read_text()).get("used", [])
+    if text not in used:
+        used.append(text)
+    STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    STATE_FILE.write_text(json.dumps({"used": used}))
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--run-id", required=True)
@@ -96,16 +115,28 @@ def main():
     if args.previous_script:
         previous = json.loads(Path(args.previous_script).read_text())
 
+    used_seed = False
     if args.edit:
-        prompt = ""  # ignored when editing
+        prompt = ""
     else:
         seed = _next_seed_quote()
         if seed:
             prompt = _prompt_from_seed(*seed)
+            used_seed = True
         else:
             prompt = _prompt_fallback()
 
     out = build(FORMAT, prompt, args.run_id, edit_instruction=args.edit, previous_script=previous)
+
+    # When falling back to Gemini, record the generated quote so we don't repeat it
+    if not args.edit and not used_seed:
+        script_path = out / "script.json"
+        if script_path.exists():
+            spec = json.loads(script_path.read_text())
+            quote_text = spec.get("quote", "").strip()
+            if quote_text:
+                _record_used(quote_text)
+
     print(f"Built {FORMAT} at {out}")
 
 

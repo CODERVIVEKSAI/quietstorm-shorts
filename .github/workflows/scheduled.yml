@@ -57,8 +57,11 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          if ! git diff --quiet data/quote_state.json 2>/dev/null; then
-            git add data/quote_state.json
+          git add data/quote_state.json
+          # `git diff --cached` covers both modified AND new files, unlike `git diff`
+          if ! git diff --cached --quiet -- data/quote_state.json 2>/dev/null; then
             git commit -m "chore: advance quote seed state"
             git push
+          else
+            echo "quote state unchanged; nothing to commit"
           fi
