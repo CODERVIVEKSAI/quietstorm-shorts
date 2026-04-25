@@ -53,10 +53,8 @@ VOICE_OVERRIDES = {
     "andrew": "en-US-AndrewMultilingualNeural",
     "brian": "en-US-BrianMultilingualNeural",
     "christopher": "en-US-ChristopherNeural",
-    "aarav": "en-IN-AaravNeural",       # newer Indian English male, more natural
-    "ananya": "en-IN-AnanyaNeural",     # newer Indian English female, more natural
-    "prabhat": "en-IN-PrabhatNeural",   # older Indian English male (kept as fallback)
-    "neerja": "en-IN-NeerjaNeural",     # older Indian English female (kept as fallback)
+    "prabhat": "en-IN-PrabhatNeural",   # Indian English male
+    "neerja": "en-IN-NeerjaNeural",     # Indian English female
 }
 
 

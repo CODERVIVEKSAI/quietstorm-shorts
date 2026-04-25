@@ -308,27 +308,29 @@ function stopProgressPolling() {
   if (progressPollHandle) { clearInterval(progressPollHandle); progressPollHandle = null; }
 }
 
+// Lazy-loaded recents: cards show metadata + ▶ button, video downloads only on click.
+// Avoids downloading 50-100MB of artifact zips on every page load.
 async function loadRecent() {
   const grid = $("#recent-grid");
   const countLabel = $("#recent-count");
-  grid.innerHTML = '<p class="muted"><span class="loading"></span>loading recent edits & customs…</p>';
+  grid.innerHTML = '<p class="muted"><span class="loading"></span>loading recent…</p>';
   $("#recent-empty").classList.add("hidden");
 
   let customRuns = [], editRuns = [];
   try {
     [customRuns, editRuns] = await Promise.all([
-      fetchRecentRuns(WORKFLOWS.custom, 10),
-      fetchRecentRuns(WORKFLOWS.edit, 10),
+      fetchRecentRuns(WORKFLOWS.custom, 5),
+      fetchRecentRuns(WORKFLOWS.edit, 5),
     ]);
   } catch (e) {
     grid.innerHTML = "";
-    return; // fail silently — main flow shouldn't break
+    return;
   }
 
   const all = [...customRuns, ...editRuns]
     .filter((r) => r.status === "completed" && r.conclusion === "success")
     .sort((a, b) => new Date(b.run_started_at) - new Date(a.run_started_at))
-    .slice(0, 8);
+    .slice(0, 6);
 
   if (!all.length) {
     grid.innerHTML = "";
@@ -337,39 +339,47 @@ async function loadRecent() {
     return;
   }
 
-  countLabel.textContent = `${all.length} most recent`;
+  countLabel.textContent = `${all.length} · click to load`;
   grid.innerHTML = "";
 
-  await Promise.all(all.map(async (run) => {
-    const placeholder = document.createElement("div");
-    placeholder.className = "video-card";
+  for (const run of all) {
+    const card = document.createElement("div");
+    card.className = "video-card";
     const dateStr = new Date(run.run_started_at).toLocaleString(undefined, {
       month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
     });
     const kind = run.name === "Custom Video" ? "custom" : "edit";
-    placeholder.innerHTML = `<div class="meta"><span class="loading"></span>loading ${kind} from ${dateStr}…</div>`;
-    grid.appendChild(placeholder);
-
-    try {
-      const arts = await fetchArtifacts(run.id);
-      if (!arts.length) {
-        placeholder.innerHTML = `<div class="meta muted small">⚠ artifact expired (${dateStr})</div>`;
-        return;
+    card.innerHTML = `
+      <div class="play-poster" style="aspect-ratio:9/16;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1a1a25,#10101a);cursor:pointer;">
+        <span style="font-size:3rem;opacity:0.7;">▶</span>
+      </div>
+      <div class="meta">
+        <span class="format-tag">${kind}</span>
+        <div class="title">${dateStr}</div>
+      </div>
+    `;
+    const poster = card.querySelector(".play-poster");
+    poster.addEventListener("click", async () => {
+      poster.innerHTML = '<span class="loading"></span><span style="margin-left:6px;color:var(--muted);">loading…</span>';
+      try {
+        const arts = await fetchArtifacts(run.id);
+        if (!arts.length) throw new Error("artifact expired");
+        const art = arts[0];
+        const blob = await downloadArtifact(art.id);
+        const { url, metadata } = await extractVideo(blob);
+        const replacement = videoCard({
+          url,
+          format: `${kind} · ${formatFromArtifact(art.name)}`,
+          metadata: metadata || { title: dateStr },
+          runId: run.id,
+        });
+        card.replaceWith(replacement);
+      } catch (e) {
+        poster.innerHTML = `<span style="color:var(--red);font-size:0.85rem;padding:8px;text-align:center;">⚠ ${escapeHtml(e.message)}</span>`;
       }
-      const art = arts[0];
-      const blob = await downloadArtifact(art.id);
-      const { url, metadata } = await extractVideo(blob);
-      const card = videoCard({
-        url,
-        format: `${kind} · ${formatFromArtifact(art.name)}`,
-        metadata: metadata || { title: dateStr },
-        runId: run.id,
-      });
-      placeholder.replaceWith(card);
-    } catch (e) {
-      placeholder.innerHTML = `<div class="meta muted small">⚠ ${escapeHtml(e.message)}</div>`;
-    }
-  }));
+    });
+    grid.appendChild(card);
+  }
 }
 
 async function loadHistory() {
