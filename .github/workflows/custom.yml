@@ -24,7 +24,13 @@ on:
         required: false
         default: "auto"
         type: choice
-        options: [auto, people, no-people, nature, tech, abstract]
+        options: [auto, people, no-people, nature, tech, abstract, animation]
+      mood:
+        description: "Mood"
+        required: false
+        default: "auto"
+        type: choice
+        options: [auto, uplifting, mysterious, energetic, calm, dark, nostalgic]
       voice:
         description: "Voice"
         required: false
@@ -45,6 +51,7 @@ jobs:
       INPUT_TONE: ${{ github.event.inputs.tone }}
       INPUT_LENGTH: ${{ github.event.inputs.length }}
       INPUT_VISUAL: ${{ github.event.inputs.visual_style }}
+      INPUT_MOOD: ${{ github.event.inputs.mood }}
       INPUT_VOICE: ${{ github.event.inputs.voice }}
     steps:
       - uses: actions/checkout@v4
@@ -62,6 +69,7 @@ jobs:
             --tone "$INPUT_TONE" \
             --length "$INPUT_LENGTH" \
             --visual-style "$INPUT_VISUAL" \
+            --mood "$INPUT_MOOD" \
             --voice "$INPUT_VOICE"
       - uses: actions/upload-artifact@v4
         with:

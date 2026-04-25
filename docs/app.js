@@ -384,6 +384,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       tone: $("#opt-tone").value,
       length: $("#opt-length").value,
       visual_style: $("#opt-visual").value,
+      mood: $("#opt-mood").value,
       voice: $("#opt-voice").value,
     };
     try {

@@ -33,6 +33,18 @@ VISUAL_HINTS = {
     "nature": "Visual query MUST be nature/landscape: forests, oceans, mountains, sky, weather.",
     "tech": "Visual query MUST be tech/urban: screens, code, city lights, devices, gadgets.",
     "abstract": "Visual query MUST be abstract: light leaks, particles, ink in water, smoke, slow motion.",
+    "animation": "Visual query MUST be animated/cartoon/motion-graphics. Prefix with 'animated' or '3d animation' or 'motion graphics' or 'cartoon'. NO live-action people or photos.",
+}
+
+# Mood — overall feeling of the video. Shapes both script atmosphere and Pexels query.
+MOODS = {
+    "auto": "Pick a mood that fits the topic.",
+    "uplifting": "Mood: uplifting, warm, inspiring. Golden-hour visuals, hopeful pacing, ending lands on a positive note.",
+    "mysterious": "Mood: mysterious, intriguing. Slow reveals, low-key visuals, withhold the answer until the end. Suspenseful pacing.",
+    "energetic": "Mood: high-octane and hype. Fast pacing, punchy delivery, restless visuals (city lights, action, motion).",
+    "calm": "Mood: peaceful and meditative. Soft visuals, unhurried delivery, ASMR-friendly pacing, ending on stillness.",
+    "dark": "Mood: dramatic and intense. High-contrast visuals, night/storm/shadow imagery, gravitas in delivery (no melodrama).",
+    "nostalgic": "Mood: warm and retro. Faded visuals, sun-drenched memory aesthetic, bittersweet tone.",
 }
 
 # Voice ID overrides (matches edge-tts voice names)
@@ -46,15 +58,18 @@ VOICE_OVERRIDES = {
 }
 
 
-def _wrap(user_prompt: str, tone: str, length: str, visual: str) -> str:
+def _wrap(user_prompt: str, tone: str, length: str, visual: str, mood: str) -> str:
     tone_line = TONES.get(tone, TONES["auto"])
     word_count, secs = LENGTHS.get(length, LENGTHS["medium"])
     visual_line = VISUAL_HINTS.get(visual, VISUAL_HINTS["auto"])
+    mood_line = MOODS.get(mood, MOODS["auto"])
     return f"""Write a YouTube Shorts voiceover script based on this topic/request:
 
 USER REQUEST: {user_prompt}
 
 {tone_line}
+
+{mood_line}
 
 Length target: {word_count} ({secs} when read aloud at natural pace).
 Clean, non-political, non-offensive. Hook in the first 3 seconds.
@@ -65,7 +80,7 @@ Return JSON with these exact keys:
 - script: the voiceover text
 - title: under 60 chars, hook-y (lowercase is fine)
 - hashtags: list of 5-8 hashtags with #
-- visual_query: 2-3 word Pexels search query (follow the visual style rule above)
+- visual_query: 2-3 word Pexels search query (follow the visual style + mood rules above)
 """
 
 
@@ -76,6 +91,7 @@ def main():
     parser.add_argument("--tone", default="auto", choices=list(TONES.keys()))
     parser.add_argument("--length", default="medium", choices=list(LENGTHS.keys()))
     parser.add_argument("--visual-style", default="auto", choices=list(VISUAL_HINTS.keys()))
+    parser.add_argument("--mood", default="auto", choices=list(MOODS.keys()))
     parser.add_argument("--voice", default="auto", choices=list(VOICE_OVERRIDES.keys()))
     parser.add_argument("--edit", default=None)
     parser.add_argument("--previous-script", default=None)
@@ -85,7 +101,7 @@ def main():
     if args.edit:
         prompt = ""
     else:
-        prompt = _wrap(args.prompt, args.tone, args.length, args.visual_style)
+        prompt = _wrap(args.prompt, args.tone, args.length, args.visual_style, args.mood)
 
     voice_override = VOICE_OVERRIDES.get(args.voice)
 
