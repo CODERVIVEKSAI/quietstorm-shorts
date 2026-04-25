@@ -194,6 +194,120 @@ async function loadToday() {
   }));
 }
 
+// Estimated wall-clock duration per workflow (used for ETA bars)
+const ESTIMATED_SECONDS = {
+  "Daily Shorts": 10 * 60,
+  "Custom Video": 5 * 60,
+  "Edit Video": 5 * 60,
+};
+
+let progressPollHandle = null;
+let progressTickHandle = null;
+
+function fmtElapsed(secs) {
+  const m = Math.floor(secs / 60);
+  const s = Math.floor(secs % 60);
+  return m > 0 ? `${m}m ${s}s` : `${s}s`;
+}
+
+async function loadInProgress() {
+  let allRuns = [];
+  for (const wf of Object.values(WORKFLOWS)) {
+    try {
+      const runs = await fetchRecentRuns(wf, 5);
+      allRuns = allRuns.concat(runs);
+    } catch { /* ignore */ }
+  }
+  const active = allRuns.filter((r) => r.status === "in_progress" || r.status === "queued");
+
+  const section = $("#in-progress");
+  const list = $("#progress-list");
+  const count = $("#progress-count");
+
+  if (!active.length) {
+    section.classList.add("hidden");
+    list.innerHTML = "";
+    count.textContent = "";
+    stopProgressPolling();
+    return;
+  }
+
+  section.classList.remove("hidden");
+  count.textContent = `${active.length} active`;
+
+  // Diff: only re-render if the set of run IDs changed
+  const newIds = active.map((r) => r.id).sort().join(",");
+  if (list.dataset.runIds === newIds) {
+    // Same runs — just update the live ticker via tickProgress()
+    return;
+  }
+  list.dataset.runIds = newIds;
+  list.innerHTML = "";
+
+  for (const run of active) {
+    const card = document.createElement("div");
+    card.className = "progress-card";
+    card.dataset.startedAt = run.run_started_at;
+    card.dataset.estimated = ESTIMATED_SECONDS[run.name] || 5 * 60;
+    card.innerHTML = `
+      <div class="top">
+        <div class="label">
+          <span class="kind">${escapeHtml(run.name)}</span>
+          <span class="status-text">${run.status === "queued" ? "queued..." : "generating..."}</span>
+        </div>
+        <a class="open-link" href="${run.html_url}" target="_blank" rel="noopener">open ↗</a>
+      </div>
+      <div class="times">
+        <span class="elapsed">0s</span> elapsed · <span class="eta">~5m</span> remaining
+      </div>
+      <div class="bar"><div class="bar-fill" style="width:0%"></div></div>
+    `;
+    list.appendChild(card);
+  }
+  tickProgress();  // immediate first tick
+  startProgressPolling();
+}
+
+function tickProgress() {
+  document.querySelectorAll(".progress-card").forEach((card) => {
+    const startedAt = new Date(card.dataset.startedAt).getTime();
+    const estimatedSec = parseInt(card.dataset.estimated, 10);
+    const elapsedSec = Math.max(0, (Date.now() - startedAt) / 1000);
+    const remainingSec = Math.max(0, estimatedSec - elapsedSec);
+    const pct = Math.min(95, (elapsedSec / estimatedSec) * 100);  // cap at 95% so it doesn't look done
+
+    card.querySelector(".elapsed").textContent = fmtElapsed(elapsedSec);
+    card.querySelector(".eta").textContent =
+      remainingSec > 0 ? `~${fmtElapsed(remainingSec)}` : "wrapping up...";
+    card.querySelector(".bar-fill").style.width = `${pct}%`;
+  });
+}
+
+function startProgressPolling() {
+  // Local ticker every second to update elapsed/ETA
+  if (!progressTickHandle) {
+    progressTickHandle = setInterval(tickProgress, 1000);
+  }
+  // Server poll every 15 seconds to detect completion + new runs
+  if (!progressPollHandle) {
+    progressPollHandle = setInterval(async () => {
+      const before = $("#progress-list").dataset.runIds;
+      await loadInProgress();
+      const after = $("#progress-list").dataset.runIds;
+      if (before && before !== after) {
+        // Something completed or started — refresh today/recent
+        loadToday();
+        loadRecent();
+      }
+    }, 15000);
+  }
+}
+
+function stopProgressPolling() {
+  if (progressTickHandle) { clearInterval(progressTickHandle); progressTickHandle = null; }
+  if (progressPollHandle) { clearInterval(progressPollHandle); progressPollHandle = null; }
+}
+
 async function loadRecent() {
   const grid = $("#recent-grid");
   const countLabel = $("#recent-count");
@@ -353,7 +467,8 @@ window.addEventListener("DOMContentLoaded", async () => {
   $("#trigger-daily").addEventListener("click", async () => {
     try {
       await triggerWorkflow(WORKFLOWS.daily);
-      toast("triggered. comes back in ~5–10 min.", "success");
+      toast("triggered. comes back in ~10 min.", "success");
+      setTimeout(loadInProgress, 3000);
     } catch (e) {
       toast(`failed: ${e.message}`, "error");
     }
@@ -391,6 +506,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       await triggerWorkflow(WORKFLOWS.custom, inputs);
       closeCustom();
       toast("custom video queued. ~5 min.", "success");
+      setTimeout(loadInProgress, 3000);  // give GitHub a moment to register the run
     } catch (e) {
       toast(`failed: ${e.message}`, "error");
     }
@@ -408,6 +524,7 @@ window.addEventListener("DOMContentLoaded", async () => {
       });
       closeEdit();
       toast("edit queued. ~5 min.", "success");
+      setTimeout(loadInProgress, 3000);
     } catch (e) {
       toast(`failed: ${e.message}`, "error");
     }
@@ -423,7 +540,7 @@ window.addEventListener("DOMContentLoaded", async () => {
 
 async function refresh() {
   try {
-    await Promise.all([loadToday(), loadRecent()]);
+    await Promise.all([loadInProgress(), loadToday(), loadRecent()]);
     if ($("#history-toggle").classList.contains("open")) {
       await loadHistory();
     }
