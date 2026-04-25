@@ -7,6 +7,7 @@ from lib import tts, visuals, assemble
 from lib.config import load_channel, voice_for, rate_for, OUTPUT_DIR
 from lib.preferences import preferences_block
 from lib.style import WRITING_RULES
+from lib import history
 
 
 def build(format_name: str, prompt: str, run_id: str, edit_instruction: str | None = None,
@@ -17,16 +18,21 @@ def build(format_name: str, prompt: str, run_id: str, edit_instruction: str | No
     out_dir = OUTPUT_DIR / run_id / format_name
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    # 1. Script — every prompt gets the channel-wide writing rules + any
-    # learned user preferences for this format prepended.
+    # 1. Script — every prompt gets the channel-wide writing rules,
+    # the "avoid these recent topics" history, and any learned preferences.
     if edit_instruction and previous_script:
         spec = script_lib.edit(previous_script, edit_instruction, format_name)
     else:
-        prefs = preferences_block(format_name)
         full_prompt = WRITING_RULES + "\n" + prompt.rstrip()
+        avoid = history.avoid_block(format_name)
+        if avoid:
+            full_prompt += "\n" + avoid
+        prefs = preferences_block(format_name)
         if prefs:
             full_prompt += "\n" + prefs
         spec = script_lib.generate(full_prompt)
+        # Record this title so we don't repeat it next time
+        history.record(format_name, spec.get("title", ""), spec.get("premise", "") or spec.get("quote", ""))
 
     (out_dir / "script.json").write_text(json.dumps(spec, indent=2))
 
@@ -67,10 +73,14 @@ def build(format_name: str, prompt: str, run_id: str, edit_instruction: str | No
     }
     (out_dir / "metadata.json").write_text(json.dumps(metadata, indent=2))
 
-    # 6. Drop intermediate clips to keep artifact size small (final mp4 already has them baked in)
+    # 6. Drop intermediate files — captions are burned into the video and audio is
+    # baked into the mp4. Keeping these in the artifact doubles its size for no benefit.
     import shutil
     if clips_dir.exists():
         shutil.rmtree(clips_dir)
+    for stale in (audio_path, srt_path):
+        if stale.exists():
+            stale.unlink()
 
     return out_dir
 

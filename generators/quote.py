@@ -137,6 +137,11 @@ def main():
             if quote_text:
                 _record_used(quote_text)
 
+    # Copy the updated state file into the artifact so the consolidate job
+    # downstream can persist it back to the repo.
+    if STATE_FILE.exists():
+        (out / "quote_state.json").write_text(STATE_FILE.read_text())
+
     print(f"Built {FORMAT} at {out}")
 
 
