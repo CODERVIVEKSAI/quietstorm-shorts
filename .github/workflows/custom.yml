@@ -1,0 +1,33 @@
+name: Custom Video
+
+on:
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: "What should the video be about? (free-form)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11", cache: pip }
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - run: pip install -r requirements.txt
+      - id: runid
+        run: echo "run_id=custom-$(date -u +%Y%m%d-%H%M%S)" >> "$GITHUB_OUTPUT"
+      - run: python -m generators.custom --run-id "${{ steps.runid.outputs.run_id }}" --prompt "${{ github.event.inputs.prompt }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: video-custom-${{ steps.runid.outputs.run_id }}
+          path: output/${{ steps.runid.outputs.run_id }}/custom/
+          retention-days: 7

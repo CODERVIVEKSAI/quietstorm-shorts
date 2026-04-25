@@ -1,0 +1,76 @@
+name: Edit Video
+
+on:
+  workflow_dispatch:
+    inputs:
+      format:
+        description: "Which format to regenerate"
+        required: true
+        type: choice
+        options: [quote, what_if, joke, golden_lady, custom]
+      edit_prompt:
+        description: "How to change it (e.g. 'make it funnier', 'shorter', 'more Indian English')"
+        required: true
+        type: string
+      source_artifact_run:
+        description: "(Optional) Numeric run ID of the previous workflow run to load the previous script from."
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11", cache: pip }
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - run: pip install -r requirements.txt
+
+      - id: runid
+        run: echo "run_id=edit-$(date -u +%Y%m%d-%H%M%S)" >> "$GITHUB_OUTPUT"
+
+      - name: Download previous artifact (if provided)
+        if: ${{ github.event.inputs.source_artifact_run != '' }}
+        run: |
+          mkdir -p prev
+          gh run download ${{ github.event.inputs.source_artifact_run }} \
+            --repo ${{ github.repository }} \
+            --dir prev \
+            --pattern "video-${{ github.event.inputs.format }}-*"
+          PREV_SCRIPT=$(find prev -name script.json | head -n 1)
+          if [ -n "$PREV_SCRIPT" ]; then
+            cp "$PREV_SCRIPT" previous_script.json
+            echo "Loaded previous script from $PREV_SCRIPT"
+          else
+            echo "No previous script.json found; will regenerate from scratch."
+          fi
+
+      - name: Regenerate with edit instruction
+        run: |
+          PREV_ARG=""
+          if [ -f previous_script.json ]; then
+            PREV_ARG="--previous-script previous_script.json"
+          fi
+          EXTRA=""
+          if [ "${{ github.event.inputs.format }}" = "custom" ]; then
+            EXTRA="--prompt \"${{ github.event.inputs.edit_prompt }}\""
+          fi
+          eval python -m generators.${{ github.event.inputs.format }} \
+            --run-id "${{ steps.runid.outputs.run_id }}" \
+            --edit "\"${{ github.event.inputs.edit_prompt }}\"" \
+            $PREV_ARG $EXTRA
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: video-${{ github.event.inputs.format }}-${{ steps.runid.outputs.run_id }}
+          path: output/${{ steps.runid.outputs.run_id }}/${{ github.event.inputs.format }}/
+          retention-days: 7

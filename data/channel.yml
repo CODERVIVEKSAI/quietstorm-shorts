@@ -1,0 +1,34 @@
+# Channel config. EDIT THIS FILE to rename the channel or change the voice.
+# Every generator and the YouTube upload step reads from here.
+
+handle: "@QuietStorm"
+display_name: "QuietStorm"
+
+# The guiding philosophy. Shows up in the bio, the pinned-post quote,
+# and subtly shapes script tone.
+tagline: "Work hard in silence. Let your success be your noise."
+
+# Default voice used by every format unless a generator overrides it.
+# Browse voices: python -c "import asyncio, edge_tts; asyncio.run(edge_tts.list_voices())"
+# Good picks: en-US-GuyNeural (male), en-US-AriaNeural (female), en-IN-PrabhatNeural (Indian English male)
+default_voice: "en-US-GuyNeural"
+
+# Short 9:16 video dimensions (YouTube Shorts requirement)
+video:
+  width: 1080
+  height: 1920
+  fps: 30
+  max_duration_seconds: 58   # under 60 to be safe
+
+# Per-format voice overrides (optional)
+voices:
+  quote: "en-US-GuyNeural"
+  what_if: "en-US-AriaNeural"
+  joke: "en-US-JennyNeural"
+  golden_lady: "en-IN-PrabhatNeural"
+
+# Hashtags appended to every upload description
+base_hashtags:
+  - "#shorts"
+  - "#quietstorm"
+  - "#daily"

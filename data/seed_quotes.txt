@@ -1,0 +1,17 @@
+# Quote seed list. One quote per line. Lines starting with # are ignored.
+# The quote generator pulls from here FIRST (top to bottom, tracking which were used),
+# and only falls back to Gemini generation when this list is exhausted.
+#
+# Format: Quote — Attribution
+# If no attribution, just the quote.
+
+Work hard in silence. Let your success be your noise. — Frank Ocean
+The man who moves a mountain begins by carrying away small stones. — Confucius
+We do not rise to the level of our goals. We fall to the level of our systems. — James Clear
+Discipline equals freedom. — Jocko Willink
+The expert in anything was once a beginner. — Helen Hayes
+You don't find willpower. You forge it. — David Goggins
+Comparison is the thief of joy. — Theodore Roosevelt
+The cave you fear to enter holds the treasure you seek. — Joseph Campbell
+What you do every day matters more than what you do once in a while. — Gretchen Rubin
+Motion is not progress. Pick a direction and cut. — Anonymous
