@@ -9,9 +9,9 @@ display_name: "QuietStorm"
 tagline: "Work hard in silence. Let your success be your noise."
 
 # Default voice used by every format unless a generator overrides it.
-# Browse voices: python -c "import asyncio, edge_tts; asyncio.run(edge_tts.list_voices())"
-# Good picks: en-US-GuyNeural (male), en-US-AriaNeural (female), en-IN-PrabhatNeural (Indian English male)
-default_voice: "en-US-GuyNeural"
+# Picked for the "typical YouTube Shorts" energetic narrator vibe.
+# To swap, change the value below — see voices/Shorts notes at bottom.
+default_voice: "en-US-AndrewMultilingualNeural"
 
 # Short 9:16 video dimensions (YouTube Shorts requirement)
 video:
@@ -20,12 +20,22 @@ video:
   fps: 30
   max_duration_seconds: 58   # under 60 to be safe
 
-# Per-format voice overrides (optional)
+# Per-format voice overrides — picked for Shorts energy
 voices:
-  quote: "en-US-GuyNeural"
-  what_if: "en-US-AriaNeural"
-  joke: "en-US-JennyNeural"
-  golden_lady: "en-IN-PrabhatNeural"
+  quote: "en-US-AndrewMultilingualNeural"   # warm, modern male — reflective but not stiff
+  what_if: "en-US-EmmaMultilingualNeural"   # young female, expressive, viral-Shorts feel
+  joke: "en-US-AvaMultilingualNeural"       # friendly, natural female with timing
+  golden_lady: "en-IN-NeerjaNeural"          # warm Indian-English female ("auntie kitchen" feel)
+
+# === Voice swap reference ===
+# Shorts-style energetic:    en-US-EmmaMultilingualNeural, en-US-AvaMultilingualNeural,
+#                            en-US-AndrewMultilingualNeural, en-US-BrianMultilingualNeural
+# News/serious:              en-US-GuyNeural, en-US-AriaNeural
+# TikTok-Jessie-ish (female):en-US-JennyNeural
+# Indian English (male):     en-IN-PrabhatNeural
+# Indian English (female):   en-IN-NeerjaNeural
+# British:                   en-GB-RyanNeural, en-GB-SoniaNeural
+# Browse all: python -c "import asyncio,edge_tts; print('\n'.join(v['ShortName'] for v in asyncio.run(edge_tts.list_voices()) if v['Locale'].startswith('en-')))"
 
 # Hashtags appended to every upload description
 base_hashtags:
