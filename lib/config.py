@@ -24,6 +24,12 @@ def voice_for(format_name: str) -> str:
     return cfg.get("voices", {}).get(format_name, cfg["default_voice"])
 
 
+def rate_for(format_name: str) -> str:
+    """Per-format speech rate, e.g. '-7%' for slower. Falls back to '+0%'."""
+    cfg = load_channel()
+    return cfg.get("rates", {}).get(format_name, "+0%")
+
+
 def video_dims():
     cfg = load_channel()
     v = cfg["video"]

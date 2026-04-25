@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from lib import script as script_lib
 from lib import tts, visuals, assemble
-from lib.config import load_channel, voice_for, OUTPUT_DIR
+from lib.config import load_channel, voice_for, rate_for, OUTPUT_DIR
 
 
 def build(format_name: str, prompt: str, run_id: str, edit_instruction: str | None = None,
@@ -27,7 +27,7 @@ def build(format_name: str, prompt: str, run_id: str, edit_instruction: str | No
     audio_path = out_dir / "voice.mp3"
     srt_path = out_dir / "captions.srt"
     voice = voice_override or voice_for(format_name)
-    tts.synthesize(spec["script"], voice, audio_path, srt_path)
+    tts.synthesize(spec["script"], voice, audio_path, srt_path, rate=rate_for(format_name))
 
     # 3. Visuals
     query = spec.get("visual_query", format_name)

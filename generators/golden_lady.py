@@ -53,6 +53,18 @@ NOT a yelling brainrot Short. NOT boomer "trust me bhai" energy. Mix of Hindi-fl
 English phrasing where it lands naturally ("legit", "actually", "bro it just hits").
 No medical claims. Reference tradition and home cooking with respect, not nostalgia mush.
 
+CRITICAL — write for a TTS Indian voice that pauses at punctuation. To sound natural:
+- Use SHORT sentences (4-9 words each). Not run-on.
+- Insert COMMAS where a real person would breathe.
+- Use ELLIPSES (...) for thoughtful pauses, especially before a key claim.
+- Use EM-DASHES (—) for emphasis pivots.
+- Spell out numbers as words ("twenty" not "20") so the voice doesn't say "two zero".
+- Avoid acronyms — they sound robotic.
+Example of good rhythm:
+  "My grandmother... she had this one rule. No machine-ground spices. Ever.
+   Why? Because the moment you grind with heat... the aroma's gone. Just like that.
+   Golden Lady stone-pounds. Always cold. The flavor? It just hits different."
+
 Also: Pexels search query MUST avoid people — search for spices, oils, jars, mortar,
 flames, cooking close-ups. The earlier ad accidentally pulled stock footage of a random
 person; we want product/ingredient shots only.

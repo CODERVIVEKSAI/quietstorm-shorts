@@ -12,8 +12,8 @@ from pathlib import Path
 import edge_tts
 
 
-async def _synthesize_audio(text: str, voice: str, audio_path: Path):
-    communicate = edge_tts.Communicate(text, voice)
+async def _synthesize_audio(text: str, voice: str, audio_path: Path, rate: str = "+0%"):
+    communicate = edge_tts.Communicate(text, voice, rate=rate)
     await communicate.save(str(audio_path))
 
 
@@ -49,9 +49,10 @@ def _build_srt(text: str, duration: float, words_per_cue: int = 4) -> str:
     return "\n".join(cues)
 
 
-def synthesize(text: str, voice: str, audio_path: Path, srt_path: Path):
-    """Synthesize voiceover MP3 + write a time-proportional SRT caption file."""
+def synthesize(text: str, voice: str, audio_path: Path, srt_path: Path, rate: str = "+0%"):
+    """Synthesize voiceover MP3 + write a time-proportional SRT caption file.
+    `rate` is an edge-tts speech-rate string like "+0%", "-7%", "+12%"."""
     audio_path.parent.mkdir(parents=True, exist_ok=True)
-    asyncio.run(_synthesize_audio(text, voice, audio_path))
+    asyncio.run(_synthesize_audio(text, voice, audio_path, rate=rate))
     duration = _audio_duration(audio_path)
     srt_path.write_text(_build_srt(text, duration))

@@ -24,8 +24,13 @@ video:
 voices:
   quote: "en-US-AndrewMultilingualNeural"   # warm, modern male — reflective but not stiff
   what_if: "en-US-BrianMultilingualNeural"  # young energetic male, viral-Shorts feel
-  joke: "en-US-ChristopherNeural"            # friendly conversational male, comedic timing
+  joke: "en-US-ChristopherNeural"           # friendly conversational male, comedic timing
   golden_lady: "en-IN-PrabhatNeural"        # Indian English male (Aarav not available in this edge-tts version)
+
+# Per-format speech rate. Negative = slower, positive = faster. Format: "+0%", "-7%".
+# Indian voices sound noticeably more natural at -5% to -10%.
+rates:
+  golden_lady: "-7%"
 
 # === Voice swap reference ===
 # Shorts-style energetic:    en-US-EmmaMultilingualNeural, en-US-AvaMultilingualNeural,
