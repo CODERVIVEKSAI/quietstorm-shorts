@@ -9,26 +9,31 @@ FORMAT = "joke"
 
 
 def _prompt() -> str:
-    return """Write ONE clean joke that lands in under 25 seconds as a YouTube Short.
+    return """Write ONE joke that lands in under 25 seconds as a YouTube Short.
 
 Rules:
-- Observational or absurd humor — NOT offensive, NOT political, NOT mean-spirited
-- NOT a pun that relies on text (audio-only medium)
-- Setup + punchline structure. Keep setup under 2 sentences.
-- Works for a global audience
+- Audio-only humor — no puns that need to be SEEN
+- Clean: not offensive, not political, not mean-spirited
+- Setup + punchline. Setup under 2 sentences.
 
-Bad: dad jokes that need you to SEE the pun
-Good: "I told my plants I was leaving town. They said that's fine, they weren't
-growing attached anyway." — observational, lands in audio.
+TONE: Gen-Z / Gen-Alpha humor. Observational, absurdist, self-aware. Hits the way
+relatable TikTok jokes hit. Modern references okay (apps, online life, school, gym,
+group chats, AI, parents who just discovered TikTok). Subtle slang okay if it lands
+naturally ("the way that...", "low-key", "no because actually", "and that's so fr").
+NOT cringe boomer dad jokes. NOT try-hard slang dumps. NOT skibidi-coded forced brainrot.
+
+Examples of vibe (don't reuse):
+- "Therapist: 'And what do we do when we feel anxious?' Me: 'Open Instagram, scroll until I dissociate, then forget what I was anxious about.' Therapist: 'You don't have insurance, do you.'"
+- "Group chat at 3am: someone sends 'u up?'. I'm not. But now I am. And so is everyone else. We don't reply. We just lurk. This is friendship in 2026."
 
 Return JSON:
 - script: full voiceover (30-45 words, setup + punchline + tiny beat)
 - setup: the setup line
 - punchline: the punchline
-- title: under 60 chars, hints at topic without spoiling
+- title: under 60 chars, hook without spoiling (lowercase is fine)
 - hashtags: 5-8 with #
 - visual_query: 2-3 word Pexels query for b-roll matching the joke's topic
-  (e.g., "office workers", "houseplants", "coffee shop")
+  (e.g., "office workers", "phone scrolling", "coffee shop")
 """
 
 

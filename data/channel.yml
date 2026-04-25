@@ -20,12 +20,12 @@ video:
   fps: 30
   max_duration_seconds: 58   # under 60 to be safe
 
-# Per-format voice overrides — picked for Shorts energy
+# Per-format voice overrides — male-only, Shorts-energy picks
 voices:
   quote: "en-US-AndrewMultilingualNeural"   # warm, modern male — reflective but not stiff
-  what_if: "en-US-EmmaMultilingualNeural"   # young female, expressive, viral-Shorts feel
-  joke: "en-US-AvaMultilingualNeural"       # friendly, natural female with timing
-  golden_lady: "en-IN-NeerjaNeural"          # warm Indian-English female ("auntie kitchen" feel)
+  what_if: "en-US-BrianMultilingualNeural"  # young energetic male, viral-Shorts feel
+  joke: "en-US-RyanMultilingualNeural"      # younger conversational male, comedic timing
+  golden_lady: "en-IN-PrabhatNeural"        # Indian English male — modern, trustworthy
 
 # === Voice swap reference ===
 # Shorts-style energetic:    en-US-EmmaMultilingualNeural, en-US-AvaMultilingualNeural,

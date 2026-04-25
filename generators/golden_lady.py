@@ -47,8 +47,15 @@ Write a voiceover script of 45-60 words:
 - State ONE clear benefit (taste, health, tradition — pick one, don't list)
 - Close with a soft CTA ("Link in bio" / "DM us" — pick one)
 
-Tone: warm, trustworthy, like a family member sharing a tip. NOT salesy. NOT yelling.
-No medical claims. Okay to reference tradition and home cooking.
+Tone: young modern Indian guy talking about why his family uses these — confident,
+casual, slightly cheeky. Think "your cool cousin who actually cooks". NOT a salesy ad voice.
+NOT a yelling brainrot Short. NOT boomer "trust me bhai" energy. Mix of Hindi-flavored
+English phrasing where it lands naturally ("legit", "actually", "bro it just hits").
+No medical claims. Reference tradition and home cooking with respect, not nostalgia mush.
+
+Also: Pexels search query MUST avoid people — search for spices, oils, jars, mortar,
+flames, cooking close-ups. The earlier ad accidentally pulled stock footage of a random
+person; we want product/ingredient shots only.
 
 Return JSON:
 - script: 45-60 word voiceover
