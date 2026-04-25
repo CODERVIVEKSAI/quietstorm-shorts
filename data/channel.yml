@@ -24,7 +24,7 @@ video:
 voices:
   quote: "en-US-AndrewMultilingualNeural"   # warm, modern male — reflective but not stiff
   what_if: "en-US-BrianMultilingualNeural"  # young energetic male, viral-Shorts feel
-  joke: "en-US-RyanMultilingualNeural"      # younger conversational male, comedic timing
+  joke: "en-US-ChristopherNeural"            # friendly conversational male, comedic timing
   golden_lady: "en-IN-PrabhatNeural"        # Indian English male — modern, trustworthy
 
 # === Voice swap reference ===
