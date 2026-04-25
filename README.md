@@ -57,13 +57,30 @@ In the repo on GitHub: `Settings → Secrets and variables → Actions → New r
 
 That's it. No YouTube setup, no OAuth, no environments.
 
-### 4. (Optional) Background music
+### 4. Background music & ASMR per format
 
-Drop royalty-free MP3/M4A files into `assets/music/`. The first one found is mixed at 12% under the voiceover.
+Drop royalty-free MP3/M4A files into:
 
-Free sources:
-- <https://pixabay.com/music/>
-- YouTube Audio Library (<https://studio.youtube.com> → Audio library)
+- `assets/music/quote/` — ASMR-style for Quote of the Day (rain, lo-fi, soft piano)
+- `assets/music/what_if/` — energetic build-up tracks
+- `assets/music/joke/` — playful / upbeat
+- `assets/music/golden_lady/` — warm acoustic / Indian ambient
+- `assets/music/` — fallback used by any format that has no per-format track
+
+The pipeline picks the alphabetically-first file in the format-specific folder, then falls back to the generic folder. Mix is at 12% under the voiceover.
+
+**Free ASMR / lo-fi sources** (no attribution required, all CC0 / Pixabay license):
+
+- Pixabay rain ASMR: <https://pixabay.com/music/search/genre/ambient/?mood=relaxing>
+- Pixabay lo-fi: <https://pixabay.com/music/search/genre/lo-fi/>
+- YouTube Audio Library → search "ambient" or "ASMR"
+- BBC Sound Effects (free non-commercial): <https://sound-effects.bbcrewind.co.uk/>
+
+Download a track, drop it in `assets/music/quote/`, commit + push. Done.
+
+### 5. (Optional) Dashboard website
+
+Skip if you're happy downloading from GitHub Actions. Otherwise see "Dashboard" section below.
 
 ---
 
@@ -106,6 +123,40 @@ One MP4 artifact appears in the run. Download as above.
 - **source_artifact_run** — (optional) the numeric run ID of the previous run if you want the AI to start from the previous script and edit it. Find it in the URL: `.../actions/runs/<THIS_NUMBER>`. Leave blank to regenerate from scratch with your edit as guidance.
 
 A new MP4 artifact appears. Download as above.
+
+---
+
+## Dashboard (optional but nice)
+
+A static web dashboard that replaces the "open GitHub Actions, click run, find artifacts, download zip" daily ritual. Lives at `docs/`, hosted on GitHub Pages.
+
+**What it does:**
+- Shows today's 4 videos as embedded HTML5 players (no download needed)
+- "Generate custom video" button → fires the custom workflow with a prompt
+- "Edit" button on each video → fires the edit workflow with your prompt
+- Shows past 20 runs across all 3 workflows
+- Mobile-first, dark, Gen-Z themed
+
+**One-time setup:**
+
+1. **Enable GitHub Pages** for the repo:
+   - Repo → Settings → Pages
+   - Source: **Deploy from a branch** → Branch: `main` → Folder: `/docs`
+   - Save. Dashboard URL appears at the top: `https://CODERVIVEKSAI.github.io/quietstorm-shorts/`
+
+2. **Generate a fine-grained Personal Access Token (PAT)** that the dashboard uses to talk to the GitHub API on your behalf:
+   - <https://github.com/settings/tokens?type=beta> → **Generate new token** (fine-grained)
+   - **Repository access**: Only select repositories → `quietstorm-shorts`
+   - **Permissions**:
+     - Actions: **Read and write** (to trigger custom + edit workflows)
+     - Contents: **Read** (to read artifact metadata)
+     - Metadata: **Read** (mandatory)
+   - Expiration: 90 days (or whatever you prefer; you'll re-paste it then)
+   - Generate. Copy the `github_pat_...` value.
+
+3. **Open the dashboard URL.** First load it asks for the PAT — paste it. It saves to your browser's localStorage; never sent anywhere except `api.github.com`.
+
+The dashboard works on iPhone Safari — add to home screen for an app-like icon.
 
 ---
 

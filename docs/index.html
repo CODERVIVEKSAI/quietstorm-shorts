@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a0a0f" />
+  <title>QuietStorm</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <script defer src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <span class="logo">⟨</span>
+      <h1>QuietStorm</h1>
+    </div>
+    <div class="header-actions">
+      <button id="refresh-btn" class="icon-btn" title="Refresh">↻</button>
+      <button id="settings-btn" class="icon-btn" title="Settings">⚙</button>
+    </div>
+  </header>
+
+  <main>
+    <section id="today">
+      <div class="section-header">
+        <h2>today</h2>
+        <span id="today-date" class="muted"></span>
+      </div>
+      <div id="today-grid" class="grid"></div>
+      <div id="today-empty" class="empty hidden">
+        <p>no run today yet.</p>
+        <button id="trigger-daily" class="ghost-btn">trigger now</button>
+      </div>
+    </section>
+
+    <section id="history">
+      <div class="section-header collapsible" id="history-toggle">
+        <h2>history</h2>
+        <span class="chev">›</span>
+      </div>
+      <div id="history-list" class="hidden"></div>
+    </section>
+  </main>
+
+  <button id="custom-btn" class="fab" title="custom video">+</button>
+
+  <!-- ============== modals ============== -->
+
+  <div id="setup-modal" class="modal hidden">
+    <div class="modal-card">
+      <h3>connect your github</h3>
+      <p class="muted">
+        we need a personal access token to fetch your videos and trigger runs.
+        scopes needed: <code>repo</code> + <code>workflow</code> + <code>actions:read</code>.
+      </p>
+      <ol class="muted small">
+        <li>go to <a href="https://github.com/settings/tokens?type=beta" target="_blank" rel="noopener">github tokens</a></li>
+        <li>click <b>Generate new token</b> → <b>fine-grained</b></li>
+        <li>repository access: <b>only this repository</b> → <code>quietstorm-shorts</code></li>
+        <li>permissions: <b>actions: read &amp; write</b>, <b>contents: read</b>, <b>metadata: read</b></li>
+        <li>generate, copy, paste below</li>
+      </ol>
+      <input id="pat-input" type="password" placeholder="github_pat_..." autocomplete="off" />
+      <button id="pat-save" class="primary-btn">save &amp; load videos</button>
+      <p class="muted tiny">stored in your browser only. never sent anywhere except github.com.</p>
+    </div>
+  </div>
+
+  <div id="custom-modal" class="modal hidden">
+    <div class="modal-card">
+      <h3>generate custom video</h3>
+      <p class="muted small">write what the video should be about. ai writes the script, picks visuals, and assembles a short.</p>
+      <textarea id="custom-prompt" rows="4" placeholder="e.g. a 30-second short explaining why hyderabadi biryani is unique"></textarea>
+      <div class="row">
+        <button id="custom-cancel" class="ghost-btn">cancel</button>
+        <button id="custom-submit" class="primary-btn">generate</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="edit-modal" class="modal hidden">
+    <div class="modal-card">
+      <h3>edit this video</h3>
+      <p class="muted small">tell the ai how to change it. it will regenerate using the previous script as a starting point.</p>
+      <p class="muted tiny" id="edit-target"></p>
+      <textarea id="edit-prompt" rows="4" placeholder="e.g. make it funnier, 10 seconds shorter, more sigma energy"></textarea>
+      <div class="row">
+        <button id="edit-cancel" class="ghost-btn">cancel</button>
+        <button id="edit-submit" class="primary-btn">regenerate</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+</body>
+</html>

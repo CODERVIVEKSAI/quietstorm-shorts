@@ -44,7 +44,7 @@ def build(format_name: str, prompt: str, run_id: str, edit_instruction: str | No
         audio=audio_path,
         srt=srt_path,
         output=video_path,
-        music=assemble.find_music(),
+        music=assemble.find_music(format_name),
     )
 
     # 5. Metadata + suggested YouTube fields (so you can copy-paste at upload time)

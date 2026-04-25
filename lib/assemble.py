@@ -105,13 +105,21 @@ def assemble(
     return output
 
 
-def find_music() -> Path | None:
-    """Pick first music file in assets/music/ (user drops royalty-free tracks there)."""
+def find_music(format_name: str | None = None) -> Path | None:
+    """Pick a music file. Prefers a format-specific track at assets/music/<format>/,
+    then falls back to anything in assets/music/."""
     music_dir = ASSETS_DIR / "music"
     if not music_dir.exists():
         return None
-    for ext in ("*.mp3", "*.m4a", "*.wav"):
-        tracks = list(music_dir.glob(ext))
-        if tracks:
-            return tracks[0]
+    candidates: list[Path] = []
+    if format_name:
+        per_format = music_dir / format_name
+        if per_format.exists():
+            candidates.append(per_format)
+    candidates.append(music_dir)
+    for d in candidates:
+        for ext in ("*.mp3", "*.m4a", "*.wav"):
+            tracks = sorted(d.glob(ext))
+            if tracks:
+                return tracks[0]
     return None
