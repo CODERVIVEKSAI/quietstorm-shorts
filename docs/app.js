@@ -197,11 +197,12 @@ async function loadToday() {
   }));
 }
 
-// Estimated wall-clock duration per workflow (used for ETA bars)
+// Estimated wall-clock duration per workflow (used for ETA bars).
+// Based on observed averages — most runs complete in 1-2 min.
 const ESTIMATED_SECONDS = {
-  "Daily Shorts": 10 * 60,
-  "Custom Video": 5 * 60,
-  "Edit Video": 5 * 60,
+  "Daily Shorts": 3 * 60,    // matrix runs in parallel, slowest job ~2 min
+  "Custom Video": 2 * 60,
+  "Edit Video": 2 * 60,
 };
 
 let progressPollHandle = null;
@@ -302,7 +303,7 @@ function startProgressPolling() {
         loadToday();
         loadRecent();
       }
-    }, 15000);
+    }, 10000);  // poll every 10s instead of 15s for snappier completion detection
   }
 }
 
