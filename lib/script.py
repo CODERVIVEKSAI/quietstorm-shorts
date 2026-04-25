@@ -1,32 +1,34 @@
 """Gemini-backed script generation. Returns structured JSON per format.
 
-Every generator calls `generate()` with a system prompt + user prompt.
-`edit()` takes a previous script + an edit instruction and returns a revised script.
+Tries gemini-2.5-flash-lite first (large free quota, ~1500 RPD), falls back to
+gemini-2.5-flash on errors. Quota errors on the first model retry against the
+second instead of failing the run.
 """
 
 import json
 import os
 import re
 import google.generativeai as genai
+from google.api_core import exceptions as gax
 
-_MODEL_NAME = "gemini-2.5-flash"  # free tier; swap to gemini-2.5-flash-lite if quota is tight
+# Try lite first — much higher free-tier quota. Flash is fallback for quality
+# but is rate-limited to ~20 RPD on free tier so we use it only when lite fails.
+_MODEL_CANDIDATES = ["gemini-2.5-flash-lite", "gemini-2.5-flash"]
 
-_client = None
+_configured = False
 
 
-def _model():
-    global _client
-    if _client is None:
+def _configure():
+    global _configured
+    if not _configured:
         key = os.environ.get("GEMINI_API_KEY")
         if not key:
             raise RuntimeError("GEMINI_API_KEY not set")
         genai.configure(api_key=key)
-        _client = genai.GenerativeModel(_MODEL_NAME)
-    return _client
+        _configured = True
 
 
 def _extract_json(text: str) -> dict:
-    """Gemini sometimes wraps JSON in ```json ... ``` fences. Strip and parse."""
     text = text.strip()
     fence = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
     if fence:
@@ -39,9 +41,19 @@ def _extract_json(text: str) -> dict:
 
 
 def generate(prompt: str) -> dict:
-    """Run a generation prompt. Expects the model to return JSON."""
-    resp = _model().generate_content(prompt)
-    return _extract_json(resp.text)
+    """Run a generation prompt. Tries each candidate model in order until one succeeds."""
+    _configure()
+    last_err = None
+    for model_name in _MODEL_CANDIDATES:
+        try:
+            model = genai.GenerativeModel(model_name)
+            resp = model.generate_content(prompt)
+            return _extract_json(resp.text)
+        except (gax.ResourceExhausted, gax.NotFound, gax.PermissionDenied) as e:
+            print(f"[script] {model_name} unavailable ({type(e).__name__}); trying next…")
+            last_err = e
+            continue
+    raise last_err if last_err else RuntimeError("no Gemini model succeeded")
 
 
 def edit(previous: dict, edit_instruction: str, format_hint: str) -> dict:
