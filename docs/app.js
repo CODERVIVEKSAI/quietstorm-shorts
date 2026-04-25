@@ -315,8 +315,15 @@ window.addEventListener("DOMContentLoaded", async () => {
   $("#custom-submit").addEventListener("click", async () => {
     const prompt = $("#custom-prompt").value.trim();
     if (!prompt) return toast("write a prompt", "error");
+    const inputs = {
+      prompt,
+      tone: $("#opt-tone").value,
+      length: $("#opt-length").value,
+      visual_style: $("#opt-visual").value,
+      voice: $("#opt-voice").value,
+    };
     try {
-      await triggerWorkflow(WORKFLOWS.custom, { prompt });
+      await triggerWorkflow(WORKFLOWS.custom, inputs);
       closeCustom();
       toast("custom video queued. ~5 min.", "success");
     } catch (e) {

@@ -75,6 +75,51 @@
       <h3>generate custom video</h3>
       <p class="muted small">write what the video should be about. ai writes the script, picks visuals, and assembles a short.</p>
       <textarea id="custom-prompt" rows="4" placeholder="e.g. a 30-second short explaining why hyderabadi biryani is unique"></textarea>
+
+      <div class="opt-grid">
+        <label>
+          <span>tone</span>
+          <select id="opt-tone">
+            <option value="auto">auto</option>
+            <option value="hype">hype (gen-z)</option>
+            <option value="funny">funny</option>
+            <option value="chill">chill</option>
+            <option value="serious">serious</option>
+            <option value="educational">educational</option>
+          </select>
+        </label>
+        <label>
+          <span>length</span>
+          <select id="opt-length">
+            <option value="short">short (~20s)</option>
+            <option value="medium" selected>medium (~40s)</option>
+            <option value="max">max (~58s)</option>
+          </select>
+        </label>
+        <label>
+          <span>visuals</span>
+          <select id="opt-visual">
+            <option value="auto">auto</option>
+            <option value="no-people">no people</option>
+            <option value="people">with people</option>
+            <option value="nature">nature</option>
+            <option value="tech">tech / urban</option>
+            <option value="abstract">abstract</option>
+          </select>
+        </label>
+        <label>
+          <span>voice</span>
+          <select id="opt-voice">
+            <option value="auto">auto</option>
+            <option value="andrew">andrew (warm male)</option>
+            <option value="brian">brian (energetic)</option>
+            <option value="christopher">christopher (friendly)</option>
+            <option value="prabhat">prabhat (indian male)</option>
+            <option value="neerja">neerja (indian female)</option>
+          </select>
+        </label>
+      </div>
+
       <div class="row">
         <button id="custom-cancel" class="ghost-btn">cancel</button>
         <button id="custom-submit" class="primary-btn">generate</button>

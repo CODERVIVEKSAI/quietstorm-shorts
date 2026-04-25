@@ -28,6 +28,9 @@ jobs:
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
       GH_TOKEN: ${{ github.token }}
+      INPUT_FORMAT: ${{ github.event.inputs.format }}
+      INPUT_EDIT_PROMPT: ${{ github.event.inputs.edit_prompt }}
+      INPUT_SOURCE_RUN: ${{ github.event.inputs.source_artifact_run }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -42,10 +45,10 @@ jobs:
         if: ${{ github.event.inputs.source_artifact_run != '' }}
         run: |
           mkdir -p prev
-          gh run download ${{ github.event.inputs.source_artifact_run }} \
-            --repo ${{ github.repository }} \
+          gh run download "$INPUT_SOURCE_RUN" \
+            --repo "${{ github.repository }}" \
             --dir prev \
-            --pattern "video-${{ github.event.inputs.format }}-*"
+            --pattern "video-${INPUT_FORMAT}-*" || echo "no matching artifact"
           PREV_SCRIPT=$(find prev -name script.json | head -n 1)
           if [ -n "$PREV_SCRIPT" ]; then
             cp "$PREV_SCRIPT" previous_script.json
@@ -56,18 +59,14 @@ jobs:
 
       - name: Regenerate with edit instruction
         run: |
-          PREV_ARG=""
+          ARGS=(--run-id "${{ steps.runid.outputs.run_id }}" --edit "$INPUT_EDIT_PROMPT")
           if [ -f previous_script.json ]; then
-            PREV_ARG="--previous-script previous_script.json"
+            ARGS+=(--previous-script previous_script.json)
           fi
-          EXTRA=""
-          if [ "${{ github.event.inputs.format }}" = "custom" ]; then
-            EXTRA="--prompt \"${{ github.event.inputs.edit_prompt }}\""
+          if [ "$INPUT_FORMAT" = "custom" ]; then
+            ARGS+=(--prompt "$INPUT_EDIT_PROMPT")
           fi
-          eval python -m generators.${{ github.event.inputs.format }} \
-            --run-id "${{ steps.runid.outputs.run_id }}" \
-            --edit "\"${{ github.event.inputs.edit_prompt }}\"" \
-            $PREV_ARG $EXTRA
+          python -m "generators.${INPUT_FORMAT}" "${ARGS[@]}"
 
       - uses: actions/upload-artifact@v4
         with:

@@ -7,6 +7,30 @@ on:
         description: "What should the video be about? (free-form)"
         required: true
         type: string
+      tone:
+        description: "Tone"
+        required: false
+        default: "auto"
+        type: choice
+        options: [auto, serious, funny, hype, chill, educational]
+      length:
+        description: "Length"
+        required: false
+        default: "medium"
+        type: choice
+        options: [short, medium, max]
+      visual_style:
+        description: "Visual style"
+        required: false
+        default: "auto"
+        type: choice
+        options: [auto, people, no-people, nature, tech, abstract]
+      voice:
+        description: "Voice"
+        required: false
+        default: "auto"
+        type: choice
+        options: [auto, andrew, brian, christopher, prabhat, neerja]
 
 permissions:
   contents: read
@@ -17,6 +41,11 @@ jobs:
     env:
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+      INPUT_PROMPT: ${{ github.event.inputs.prompt }}
+      INPUT_TONE: ${{ github.event.inputs.tone }}
+      INPUT_LENGTH: ${{ github.event.inputs.length }}
+      INPUT_VISUAL: ${{ github.event.inputs.visual_style }}
+      INPUT_VOICE: ${{ github.event.inputs.voice }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -25,7 +54,15 @@ jobs:
       - run: pip install -r requirements.txt
       - id: runid
         run: echo "run_id=custom-$(date -u +%Y%m%d-%H%M%S)" >> "$GITHUB_OUTPUT"
-      - run: python -m generators.custom --run-id "${{ steps.runid.outputs.run_id }}" --prompt "${{ github.event.inputs.prompt }}"
+      - name: Generate
+        run: |
+          python -m generators.custom \
+            --run-id "${{ steps.runid.outputs.run_id }}" \
+            --prompt "$INPUT_PROMPT" \
+            --tone "$INPUT_TONE" \
+            --length "$INPUT_LENGTH" \
+            --visual-style "$INPUT_VISUAL" \
+            --voice "$INPUT_VOICE"
       - uses: actions/upload-artifact@v4
         with:
           name: video-custom-${{ steps.runid.outputs.run_id }}

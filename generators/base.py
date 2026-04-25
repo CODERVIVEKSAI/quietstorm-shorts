@@ -8,7 +8,7 @@ from lib.config import load_channel, voice_for, OUTPUT_DIR
 
 
 def build(format_name: str, prompt: str, run_id: str, edit_instruction: str | None = None,
-          previous_script: dict | None = None) -> Path:
+          previous_script: dict | None = None, voice_override: str | None = None) -> Path:
     """Run the full pipeline for one video. Returns the path to the output directory
     (containing video.mp4 and metadata.json)."""
 
@@ -26,7 +26,8 @@ def build(format_name: str, prompt: str, run_id: str, edit_instruction: str | No
     # 2. TTS (voiceover + SRT)
     audio_path = out_dir / "voice.mp3"
     srt_path = out_dir / "captions.srt"
-    tts.synthesize(spec["script"], voice_for(format_name), audio_path, srt_path)
+    voice = voice_override or voice_for(format_name)
+    tts.synthesize(spec["script"], voice, audio_path, srt_path)
 
     # 3. Visuals
     query = spec.get("visual_query", format_name)
