@@ -25,15 +25,15 @@ voices:
   quote: "en-US-AndrewMultilingualNeural"   # warm, modern male — reflective but not stiff
   what_if: "en-US-BrianMultilingualNeural"  # young energetic male, viral-Shorts feel
   joke: "en-US-ChristopherNeural"            # friendly conversational male, comedic timing
-  golden_lady: "en-IN-PrabhatNeural"        # Indian English male — modern, trustworthy
+  golden_lady: "en-IN-AaravNeural"          # newer Indian English male — more natural cadence
 
 # === Voice swap reference ===
 # Shorts-style energetic:    en-US-EmmaMultilingualNeural, en-US-AvaMultilingualNeural,
 #                            en-US-AndrewMultilingualNeural, en-US-BrianMultilingualNeural
 # News/serious:              en-US-GuyNeural, en-US-AriaNeural
 # TikTok-Jessie-ish (female):en-US-JennyNeural
-# Indian English (male):     en-IN-PrabhatNeural
-# Indian English (female):   en-IN-NeerjaNeural
+# Indian English (male):     en-IN-AaravNeural (newer, natural), en-IN-PrabhatNeural, en-IN-RehaanNeural, en-IN-KunalNeural
+# Indian English (female):   en-IN-AnanyaNeural (newer, natural), en-IN-NeerjaNeural, en-IN-KavyaNeural
 # British:                   en-GB-RyanNeural, en-GB-SoniaNeural
 # Browse all: python -c "import asyncio,edge_tts; print('\n'.join(v['ShortName'] for v in asyncio.run(edge_tts.list_voices()) if v['Locale'].startswith('en-')))"
 

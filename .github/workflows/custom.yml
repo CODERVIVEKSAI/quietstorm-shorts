@@ -36,7 +36,7 @@ on:
         required: false
         default: "auto"
         type: choice
-        options: [auto, andrew, brian, christopher, prabhat, neerja]
+        options: [auto, andrew, brian, christopher, aarav, ananya, prabhat, neerja]
 
 permissions:
   contents: read
