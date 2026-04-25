@@ -9,7 +9,7 @@ import os
 import re
 import google.generativeai as genai
 
-_MODEL_NAME = "gemini-1.5-flash"  # free tier, fast; swap to -pro for higher quality
+_MODEL_NAME = "gemini-2.0-flash"  # free tier, fast; swap to gemini-2.5-flash for higher quality
 
 _client = None
 
