@@ -15,6 +15,9 @@ Rules:
 - Audio-only humor — no puns that need to be SEEN
 - Clean: not offensive, not political, not mean-spirited
 - Setup + punchline. Setup under 2 sentences.
+- NEVER write stylized interjections like "ARRRGGHHHH", "OOOMG", "AAAAH",
+  "NOOOOO", "WHATTTT" — TTS engines spell them out letter-by-letter and ruin
+  the joke. Use real words: "Ugh!", "Wow.", "No way.", "What?" etc.
 
 TONE: Gen-Z / Gen-Alpha humor. Observational, absurdist, self-aware. Hits the way
 relatable TikTok jokes hit. Modern references okay (apps, online life, school, gym,

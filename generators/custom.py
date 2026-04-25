@@ -74,6 +74,10 @@ USER REQUEST: {user_prompt}
 Length target: {word_count} ({secs} when read aloud at natural pace).
 Clean, non-political, non-offensive. Hook in the first 3 seconds.
 
+NEVER write stylized interjections like "ARRRGGHHHH", "OOOMG", "AAAAH",
+"NOOOOO" — the TTS engine spells them out letter-by-letter. Use real words
+("Wow.", "Ugh.", "What?!") with punctuation for emphasis instead.
+
 {visual_line}
 
 Return JSON with these exact keys:
