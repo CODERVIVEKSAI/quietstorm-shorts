@@ -111,24 +111,27 @@ async function triggerWorkflow(workflowFile, inputs = {}) {
 
 // ---------- rendering ----------
 
-function videoCard({ url, format, metadata, runId }) {
+function videoCard({ url, format, metadata, runId, formatKey }) {
   const card = document.createElement("div");
   card.className = "video-card";
   const title = (metadata && metadata.title) || format;
+  // formatKey is the underlying format identifier passed to the edit workflow;
+  // `format` may include display decoration like "edit · joke" — never send that.
+  const editKey = formatKey || format;
   card.innerHTML = `
     <video controls preload="metadata" playsinline></video>
     <div class="meta">
       <span class="format-tag">${format}</span>
       <div class="title">${escapeHtml(title)}</div>
       <div class="actions">
-        <a class="btn-mini" href="${url}" download="${format}.mp4">download</a>
-        <button class="btn-mini edit-btn" data-format="${format}" data-run="${runId}">edit</button>
+        <a class="btn-mini" href="${url}" download="${editKey}.mp4">download</a>
+        <button class="btn-mini edit-btn">edit</button>
       </div>
     </div>
   `;
   card.querySelector("video").src = url;
   card.querySelector(".edit-btn").addEventListener("click", () => {
-    openEditModal(format, runId);
+    openEditModal(editKey, runId);
   });
   return card;
 }
@@ -367,9 +370,11 @@ async function loadRecent() {
         const art = arts[0];
         const blob = await downloadArtifact(art.id);
         const { url, metadata } = await extractVideo(blob);
+        const fmtKey = formatFromArtifact(art.name);
         const replacement = videoCard({
           url,
-          format: `${kind} · ${formatFromArtifact(art.name)}`,
+          format: `${kind} · ${fmtKey}`,
+          formatKey: fmtKey,
           metadata: metadata || { title: dateStr },
           runId: run.id,
         });
