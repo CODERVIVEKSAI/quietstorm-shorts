@@ -21,9 +21,6 @@ real science or logic in under 45 seconds. Good examples:
 - "What if you skipped a stone across the Pacific"
 
 Avoid: anything politically loaded, gruesome, or sexual.
-NEVER write stylized interjections like "ARRRGGHHHH", "OOOMG", "AAAAH",
-"NOOOOO" — the TTS engine spells them out letter-by-letter. Use real words:
-"Wow.", "Yep.", "Nope.", "What?!" etc.
 
 TONE: Gen-Z / Gen-Alpha brainrot energy (16-22 yr old). Fast pacing, mid-sentence pivots,
 self-aware. Sound like the curious kid in class, not a documentary narrator. It's okay to

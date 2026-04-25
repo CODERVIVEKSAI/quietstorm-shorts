@@ -58,19 +58,17 @@ def generate(prompt: str) -> dict:
 
 def edit(previous: dict, edit_instruction: str, format_hint: str) -> dict:
     """Take a previously-generated script and apply an edit instruction."""
-    prompt = f"""You previously generated this {format_hint} script as JSON:
+    from .style import WRITING_RULES
+    prompt = f"""{WRITING_RULES}
+
+You previously generated this {format_hint} script as JSON:
 
 {json.dumps(previous, indent=2)}
 
-Apply this edit instruction and return the REVISED script as the same JSON shape:
+Apply this edit instruction and return the REVISED script as the same JSON
+shape, while honoring all the writing rules above:
 
 EDIT INSTRUCTION: {edit_instruction}
-
-HARD RULE: NEVER write stylized interjections like "ARRRGGHHHH", "OOOMG",
-"AAAAH", "NOOOOO", "WHATTTT" in the script. TTS engines spell those out
-letter-by-letter and break the audio. Use proper punctuated words instead:
-"Ugh!", "Wow.", "What?!", "No way." — exclamation marks and question marks
-do the heavy lifting.
 
 Return ONLY the revised JSON, no prose.
 """

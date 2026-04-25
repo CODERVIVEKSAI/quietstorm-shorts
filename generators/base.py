@@ -6,6 +6,7 @@ from lib import script as script_lib
 from lib import tts, visuals, assemble
 from lib.config import load_channel, voice_for, rate_for, OUTPUT_DIR
 from lib.preferences import preferences_block
+from lib.style import WRITING_RULES
 
 
 def build(format_name: str, prompt: str, run_id: str, edit_instruction: str | None = None,
@@ -16,15 +17,16 @@ def build(format_name: str, prompt: str, run_id: str, edit_instruction: str | No
     out_dir = OUTPUT_DIR / run_id / format_name
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    # 1. Script
+    # 1. Script — every prompt gets the channel-wide writing rules + any
+    # learned user preferences for this format prepended.
     if edit_instruction and previous_script:
         spec = script_lib.edit(previous_script, edit_instruction, format_name)
     else:
-        # Inject learned preferences from past edits before generating
         prefs = preferences_block(format_name)
+        full_prompt = WRITING_RULES + "\n" + prompt.rstrip()
         if prefs:
-            prompt = prompt.rstrip() + "\n" + prefs + "\n"
-        spec = script_lib.generate(prompt)
+            full_prompt += "\n" + prefs
+        spec = script_lib.generate(full_prompt)
 
     (out_dir / "script.json").write_text(json.dumps(spec, indent=2))
 
