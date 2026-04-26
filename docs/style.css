@@ -216,6 +216,15 @@ section { margin-bottom: 36px; }
 }
 .fab:hover { transform: scale(1.05); }
 
+.fab-secondary {
+  right: 88px;
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  font-size: 1.4rem;
+}
+.fab-secondary:hover { border-color: var(--accent); }
+
 .modal {
   position: fixed;
   inset: 0;

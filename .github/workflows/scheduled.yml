@@ -19,10 +19,11 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      max-parallel: 1   # serial: 6 formats × ~1.5 min each = ~9 min total
-                        # avoids Gemini rate limits entirely (no concurrent calls)
+      max-parallel: 2   # 2 at a time stays under Gemini's 15 RPM
       matrix:
-        format: [quote, what_if, joke, golden_lady, football, cricket]
+        format: [quote, what_if, joke, golden_lady]
+        # Sports (football, cricket) moved to .github/workflows/sports.yml
+        # — manual-trigger only, saves Gemini quota for the reliable daily 4
     env:
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}

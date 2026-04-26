@@ -1,0 +1,52 @@
+name: Sports Video
+
+on:
+  workflow_dispatch:
+    inputs:
+      sport:
+        description: "Which sport to recap"
+        required: true
+        default: "cricket"
+        type: choice
+        options: [cricket, football]
+
+permissions:
+  contents: write   # to commit generation_log.jsonl
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11", cache: pip }
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - run: pip install -r requirements.txt
+      - id: runid
+        run: echo "run_id=sports-$(date -u +%Y%m%d-%H%M%S)" >> "$GITHUB_OUTPUT"
+      - name: Generate
+        run: python -m generators.${{ github.event.inputs.sport }} --run-id "${{ steps.runid.outputs.run_id }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: video-${{ github.event.inputs.sport }}-${{ steps.runid.outputs.run_id }}
+          path: output/${{ steps.runid.outputs.run_id }}/${{ github.event.inputs.sport }}/
+          retention-days: 7
+      - name: Commit generation_log addition
+        if: success()
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          for i in 1 2 3 4 5; do
+            git pull --rebase origin main || true
+            git add data/generation_log.jsonl
+            if git diff --cached --quiet 2>/dev/null; then
+              echo "no log change"; break
+            fi
+            git commit -m "log: record ${{ github.event.inputs.sport }} sports video"
+            if git push; then break; fi
+            echo "push conflict, retrying..."
+            sleep $((RANDOM % 4 + 1))
+          done

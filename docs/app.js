@@ -9,6 +9,7 @@ const WORKFLOWS = {
   daily: "scheduled.yml",
   custom: "custom.yml",
   edit: "edit.yml",
+  sports: "sports.yml",
 };
 
 const PAT_KEY = "qs_pat";
@@ -198,11 +199,11 @@ async function loadToday() {
 }
 
 // Estimated wall-clock duration per workflow (used for ETA bars).
-// Based on observed averages — most runs complete in 1-2 min.
 const ESTIMATED_SECONDS = {
-  "Daily Shorts": 3 * 60,    // matrix runs in parallel, slowest job ~2 min
+  "Daily Shorts": 5 * 60,    // 4 jobs at max-parallel: 2 ≈ 4-5 min
   "Custom Video": 2 * 60,
   "Edit Video": 2 * 60,
+  "Sports Video": 2 * 60,
 };
 
 let progressPollHandle = null;
@@ -506,6 +507,24 @@ window.addEventListener("DOMContentLoaded", async () => {
   });
 
   $("#custom-btn").addEventListener("click", openCustom);
+
+  $("#sports-btn").addEventListener("click", () => {
+    $("#sports-modal").classList.remove("hidden");
+  });
+  $("#sports-cancel").addEventListener("click", () => {
+    $("#sports-modal").classList.add("hidden");
+  });
+  $("#sports-submit").addEventListener("click", async () => {
+    const sport = $("#sports-sport").value;
+    try {
+      await triggerWorkflow(WORKFLOWS.sports, { sport });
+      $("#sports-modal").classList.add("hidden");
+      toast(`${sport} video queued. ~2 min.`, "success");
+      setTimeout(loadInProgress, 3000);
+    } catch (e) {
+      toast(`failed: ${e.message}`, "error");
+    }
+  });
   $("#custom-cancel").addEventListener("click", closeCustom);
   $("#custom-submit").addEventListener("click", async () => {
     const prompt = $("#custom-prompt").value.trim();

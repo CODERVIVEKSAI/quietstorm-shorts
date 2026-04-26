@@ -65,7 +65,26 @@
     </section>
   </main>
 
+  <button id="sports-btn" class="fab fab-secondary" title="sports video">⚽</button>
   <button id="custom-btn" class="fab" title="custom video">+</button>
+
+  <div id="sports-modal" class="modal hidden">
+    <div class="modal-card">
+      <h3>generate sports video</h3>
+      <p class="muted small">pulls latest match data and writes a meme-style recap.</p>
+      <label style="display:block; margin-bottom: 14px;">
+        <span style="font-size:0.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em;">sport</span>
+        <select id="sports-sport" style="width:100%; margin-top:4px;">
+          <option value="cricket">cricket (ipl)</option>
+          <option value="football">football (rotating leagues)</option>
+        </select>
+      </label>
+      <div class="row">
+        <button id="sports-cancel" class="ghost-btn">cancel</button>
+        <button id="sports-submit" class="primary-btn">generate</button>
+      </div>
+    </div>
+  </div>
 
   <!-- ============== modals ============== -->
 
