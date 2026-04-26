@@ -29,7 +29,7 @@ sprinkle modern phrasing where it lands naturally ("low-key wild", "the math is 
 NO try-hard slang dump. NO boomer "imagine if you will...". Don't force it — pick 0-2
 phrases that fit, then write clean.
 
-Write a 75-90 word YouTube Short voiceover (target ~50 seconds):
+Write a 130-160 word YouTube Short voiceover (target ~50 seconds):
 - Open with the "What if" question (hook)
 - Build the scenario in 2-3 sentences with personality
 - Deliver a surprising, REAL answer rooted in physics/biology/math (numbers > vibes)
@@ -37,7 +37,7 @@ Write a 75-90 word YouTube Short voiceover (target ~50 seconds):
 - End with a punchy beat — meta, savage, or quietly absurd
 
 Return JSON:
-- script: 75-90 word voiceover
+- script: 130-160 word voiceover
 - premise: the "What if..." question
 - title: under 60 chars, starts with "What if" (lowercase is fine)
 - hashtags: 5-8 with #

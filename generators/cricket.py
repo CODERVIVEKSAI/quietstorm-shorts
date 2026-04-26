@@ -68,7 +68,7 @@ TONE: Energetic cricket commentator with Gen-Z Indian-cricket-Twitter delivery.
 Fast, punchy, slightly hyperbolic. Think YouTube Shorts cricket edits — quick
 takes, big calls, one wild stat or moment that makes the viewer screenshot.
 
-Structure (~75-90 words):
+Structure (~130-160 words):
 - HOOK (3-5 words): a wild opening line about the match or moment
 - 2-3 sentences on what stood out — name the star, the moment, the turning point
 - A bold opinion or "imagine if" stat
@@ -81,7 +81,7 @@ Use cricket-flavored phrasing where natural ("masterclass", "absolute carnage",
 NO yelling. NO boomer "this is what cricket is all about" energy.
 
 Return JSON:
-- script: 75-90 word voiceover
+- script: 130-160 word voiceover
 - title: under 60 chars, lowercase okay (e.g. "rcb just broke the chase script")
 - premise: one-line summary (e.g. "Mumbai Indians 195/4 chase vs CSK")
 - hashtags: 6-8 with # (#cricket #shorts #ipl + team-specific)

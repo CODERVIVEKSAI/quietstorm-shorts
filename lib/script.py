@@ -1,18 +1,18 @@
 """Gemini-backed script generation. Returns structured JSON per format.
 
-Tries gemini-2.5-flash-lite first (large free quota, ~1500 RPD), falls back to
-gemini-2.5-flash on errors. Quota errors on the first model retry against the
-second instead of failing the run.
+Tries gemini-2.5-flash-lite first (large free quota, ~1500 RPD, 15 RPM), falls
+back to gemini-2.5-flash. Retries with backoff on rate-limit errors so parallel
+matrix jobs don't all fail when they hit the 15 RPM cap simultaneously.
 """
 
 import json
 import os
 import re
+import time
+import random
 import google.generativeai as genai
 from google.api_core import exceptions as gax
 
-# Try lite first — much higher free-tier quota. Flash is fallback for quality
-# but is rate-limited to ~20 RPD on free tier so we use it only when lite fails.
 _MODEL_CANDIDATES = ["gemini-2.5-flash-lite", "gemini-2.5-flash"]
 
 _configured = False
@@ -40,19 +40,35 @@ def _extract_json(text: str) -> dict:
     return json.loads(text[start : end + 1])
 
 
+def _retry_delay_from(err: Exception) -> float:
+    """Gemini errors often include 'Please retry in NNs' — parse it if present."""
+    m = re.search(r"retry in ([0-9.]+)s", str(err))
+    if m:
+        return min(70.0, float(m.group(1)) + 3)
+    return 30.0
+
+
 def generate(prompt: str) -> dict:
-    """Run a generation prompt. Tries each candidate model in order until one succeeds."""
+    """Generate one script. Retries with backoff on rate limits, falls through
+    to the next model on persistent errors."""
     _configure()
     last_err = None
     for model_name in _MODEL_CANDIDATES:
-        try:
-            model = genai.GenerativeModel(model_name)
-            resp = model.generate_content(prompt)
-            return _extract_json(resp.text)
-        except (gax.ResourceExhausted, gax.NotFound, gax.PermissionDenied) as e:
-            print(f"[script] {model_name} unavailable ({type(e).__name__}); trying next…")
-            last_err = e
-            continue
+        for attempt in range(3):
+            try:
+                model = genai.GenerativeModel(model_name)
+                resp = model.generate_content(prompt)
+                return _extract_json(resp.text)
+            except gax.ResourceExhausted as e:
+                last_err = e
+                wait = _retry_delay_from(e) + random.uniform(0, 5)
+                print(f"[script] {model_name} rate-limited; waiting {wait:.0f}s (attempt {attempt + 1}/3)…")
+                time.sleep(wait)
+                continue
+            except (gax.NotFound, gax.PermissionDenied) as e:
+                print(f"[script] {model_name} unusable ({type(e).__name__}); trying next model…")
+                last_err = e
+                break  # don't retry, try next model
     raise last_err if last_err else RuntimeError("no Gemini model succeeded")
 
 

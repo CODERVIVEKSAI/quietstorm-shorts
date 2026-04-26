@@ -19,6 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
+      max-parallel: 3   # Gemini free tier is 15 RPM; 6 simultaneous calls > limit
       matrix:
         format: [quote, what_if, joke, golden_lady, football, cricket]
     env:

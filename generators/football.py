@@ -71,7 +71,7 @@ TONE: Energetic football commentator with Gen-Z TikTok delivery. Fast, punchy,
 slightly hyperbolic but not cringe. Think YouTube Shorts football edits — the
 kind that get millions of views with quick takes and a punchline.
 
-Structure (~75-90 words):
+Structure (~130-160 words):
 - HOOK (3-5 words): a wild opening claim about the match
 - 2-3 sentences building what happened — name the standout player, what they did
 - A bold opinion or stat that makes you go "wait what"
@@ -82,7 +82,7 @@ keep it about momentum, vibes, and the scoreline impact.
 NO "and that's why football is the best sport" boomer takes.
 
 Return JSON:
-- script: 75-90 word voiceover
+- script: 130-160 word voiceover
 - title: under 60 chars, lowercase okay (e.g. "manchester united just did the unthinkable")
 - premise: one-line summary of the match angle (e.g. "Liverpool 4-1 win at Anfield")
 - hashtags: 6-8 with # (#football #shorts #premierleague + team-specific)

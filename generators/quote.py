@@ -53,7 +53,7 @@ humor. Confident not preachy. Lightly absurd. NO cringe boomer phrasing ("hustle
 use *contained* modern phrasing ("real ones know", "lowkey", "the way that...", "this is...
 coded") if it lands naturally. Don't force it.
 
-Write a voiceover script of 75-90 words (target ~50 seconds at natural pace):
+Write a voiceover script of 130-160 words (target ~50 seconds at natural pace):
 - Open with a 3-5 word hook (NOT the quote itself) — punchy, slightly unexpected
 - Deliver the quote clearly
 - 3-4 sentences of reflection that hit DIFFERENT — meta, observational, or quietly savage
@@ -86,7 +86,7 @@ Confident not preachy. NO cringe ("hustle culture", "grind set"). NO dead slang.
 Structure: 3-5 word hook → quote → 3-4 sentences of reflection → short beat.
 
 Return JSON with keys:
-- script: 75-90 word voiceover (target ~50 seconds)
+- script: 130-160 word voiceover (target ~50 seconds)
 - quote: the quote itself
 - title: under 60 chars (lowercase is fine)
 - hashtags: 5-8 hashtags with #
