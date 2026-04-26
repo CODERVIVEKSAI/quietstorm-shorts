@@ -49,26 +49,26 @@ def _retry_delay_from(err: Exception) -> float:
 
 
 def generate(prompt: str) -> dict:
-    """Generate one script. Retries with backoff on rate limits, falls through
-    to the next model on persistent errors."""
+    """Generate one script. With matrix running serially we should rarely hit
+    rate limits, so retry once with a short wait then move on."""
     _configure()
     last_err = None
     for model_name in _MODEL_CANDIDATES:
-        for attempt in range(3):
+        for attempt in range(2):
             try:
                 model = genai.GenerativeModel(model_name)
                 resp = model.generate_content(prompt)
                 return _extract_json(resp.text)
             except gax.ResourceExhausted as e:
                 last_err = e
-                wait = _retry_delay_from(e) + random.uniform(0, 5)
-                print(f"[script] {model_name} rate-limited; waiting {wait:.0f}s (attempt {attempt + 1}/3)…")
+                wait = min(45.0, _retry_delay_from(e) + random.uniform(0, 5))
+                print(f"[script] {model_name} rate-limited; waiting {wait:.0f}s (attempt {attempt + 1}/2)…")
                 time.sleep(wait)
                 continue
             except (gax.NotFound, gax.PermissionDenied) as e:
                 print(f"[script] {model_name} unusable ({type(e).__name__}); trying next model…")
                 last_err = e
-                break  # don't retry, try next model
+                break
     raise last_err if last_err else RuntimeError("no Gemini model succeeded")
 
 

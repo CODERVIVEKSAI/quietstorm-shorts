@@ -19,7 +19,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      max-parallel: 3   # Gemini free tier is 15 RPM; 6 simultaneous calls > limit
+      max-parallel: 1   # serial: 6 formats × ~1.5 min each = ~9 min total
+                        # avoids Gemini rate limits entirely (no concurrent calls)
       matrix:
         format: [quote, what_if, joke, golden_lady, football, cricket]
     env:
