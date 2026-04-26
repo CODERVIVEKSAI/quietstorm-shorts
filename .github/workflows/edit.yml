@@ -7,7 +7,7 @@ on:
         description: "Which format to regenerate"
         required: true
         type: choice
-        options: [quote, what_if, joke, golden_lady, custom]
+        options: [quote, what_if, joke, golden_lady, football, cricket, custom]
       edit_prompt:
         description: "How to change it (e.g. 'make it funnier', 'shorter', 'more Indian English')"
         required: true

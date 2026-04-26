@@ -53,10 +53,11 @@ humor. Confident not preachy. Lightly absurd. NO cringe boomer phrasing ("hustle
 use *contained* modern phrasing ("real ones know", "lowkey", "the way that...", "this is...
 coded") if it lands naturally. Don't force it.
 
-Write a voiceover script of 40-55 words:
+Write a voiceover script of 75-90 words (target ~50 seconds at natural pace):
 - Open with a 3-5 word hook (NOT the quote itself) — punchy, slightly unexpected
 - Deliver the quote clearly
-- 1-2 sentences of reflection that hit DIFFERENT — meta, observational, or quietly savage
+- 3-4 sentences of reflection that hit DIFFERENT — meta, observational, or quietly savage
+- Optional: one concrete example or relatable moment
 - End with a short beat, no CTA
 
 Return JSON with keys:
@@ -82,10 +83,10 @@ def _prompt_fallback() -> str:
 TONE: Gen-Z / Gen-Alpha (16-25 yr old). Self-aware, fast-paced, modern internet humor.
 Confident not preachy. NO cringe ("hustle culture", "grind set"). NO dead slang.
 
-Structure: 3-5 word hook → quote → reflection that hits different → short beat.
+Structure: 3-5 word hook → quote → 3-4 sentences of reflection → short beat.
 
 Return JSON with keys:
-- script: 40-55 word voiceover
+- script: 75-90 word voiceover (target ~50 seconds)
 - quote: the quote itself
 - title: under 60 chars (lowercase is fine)
 - hashtags: 5-8 hashtags with #

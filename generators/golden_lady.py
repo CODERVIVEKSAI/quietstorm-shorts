@@ -41,8 +41,9 @@ Company brief:
 
 TODAY'S PRODUCT FOCUS: {product}
 
-Write a voiceover script of 45-60 words:
+Write a voiceover script of 75-90 words (target ~50 seconds):
 - Open with a relatable hook (a question, a kitchen moment, a small observation)
+- Tell a tiny story or anecdote (2-3 sentences) that frames why this matters
 - Introduce the product naturally (not "BUY NOW")
 - State ONE clear benefit (taste, health, tradition — pick one, don't list)
 - Close with a soft CTA ("Link in bio" / "DM us" — pick one)

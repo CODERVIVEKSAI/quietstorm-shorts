@@ -9,7 +9,9 @@ FORMAT = "joke"
 
 
 def _prompt() -> str:
-    return """Write ONE joke that lands in under 25 seconds as a YouTube Short.
+    return """Write a 75-90 word joke routine that lands in ~50 seconds as a YouTube Short.
+Build a setup-with-tangent-then-payoff structure (NOT a one-liner). Mini-rant
+energy works great here.
 
 Rules:
 - Audio-only humor — no puns that need to be SEEN
@@ -27,7 +29,7 @@ Examples of vibe (don't reuse):
 - "Group chat at 3am: someone sends 'u up?'. I'm not. But now I am. And so is everyone else. We don't reply. We just lurk. This is friendship in 2026."
 
 Return JSON:
-- script: full voiceover (30-45 words, setup + punchline + tiny beat)
+- script: full voiceover (75-90 words, setup + tangent + payoff + tiny beat)
 - setup: the setup line
 - punchline: the punchline
 - title: under 60 chars, hook without spoiling (lowercase is fine)
