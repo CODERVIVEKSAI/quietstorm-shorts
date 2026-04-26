@@ -63,29 +63,42 @@ def _prompt(league_name: str, match: dict | None) -> str:
     else:
         match_block = f"NOTE: no recent match data available for {league_name}. Write a generic hype recap of the league's current vibe instead."
 
-    return f"""You are writing a 50-second YouTube Shorts football match recap.
+    return f"""You are writing a 50-second YouTube Shorts football match recap
+in the style of viral football-Twitter / football-meme accounts. Fan-culture
+humor, not commentator energy.
 
 {match_block}
 
-TONE: Energetic football commentator with Gen-Z TikTok delivery. Fast, punchy,
-slightly hyperbolic but not cringe. Think YouTube Shorts football edits — the
-kind that get millions of views with quick takes and a punchline.
+TONE & HUMOR — read this carefully:
+- Roast losing team's fans, not the players themselves (affectionate ribbing).
+  Examples: "Arsenal fans coping season 47", "United fans, how's that top 4
+  push going", "Spurs fans, we need to check on you"
+- Fast Gen-Z football-Twitter delivery: "actually mental", "broo", "the way",
+  "lowkey", "no because", "pls", "this is diabolical"
+- Reference football fan culture: City winning everything, Arsenal collapsing in
+  spring, United's never-ending rebuild, Liverpool's "this is our year" energy,
+  Real Madrid's UCL magic, Barca's financial crisis, Spurs Spursing. Use these
+  tropes naturally — don't force them all in.
+- Big claims, screenshot-able moments, bold takes on form/managers.
+- NO commentator boomer takes ("a stunning piece of football"). Talk like the
+  Twitter replies, not Match of the Day.
+- NO actual player insults — keep it about teams, fans, vibes, narratives.
 
-Structure (~130-160 words):
-- HOOK (3-5 words): a wild opening claim about the match
-- 2-3 sentences building what happened — name the standout player, what they did
-- A bold opinion or stat that makes you go "wait what"
-- One-line payoff that lands hard
+Structure (~130-160 words / ~50 seconds):
+- HOOK (3-5 words): savage opening claim or fan callout
+- 2-3 sentences on what happened — the scoreline, the upset, the dominance
+- 1-2 sentences roasting the losing fans' coping (or hyping the winning narrative)
+- A wild opinion ("this might end his manager era") or screenshot-able take
+- Punchline that lands
 
-NO fake stats — only use the score above. If you don't know specific moments,
-keep it about momentum, vibes, and the scoreline impact.
-NO "and that's why football is the best sport" boomer takes.
+NO fake stats — only use the scoreline above. Vibes-based claims welcome.
 
 Return JSON:
 - script: 130-160 word voiceover
-- title: under 60 chars, lowercase okay (e.g. "manchester united just did the unthinkable")
-- premise: one-line summary of the match angle (e.g. "Liverpool 4-1 win at Anfield")
-- hashtags: 6-8 with # (#football #shorts #premierleague + team-specific)
+- title: under 60 chars, lowercase okay
+  (e.g. "arsenal fans, log off", "city just ended the title race")
+- premise: one-line match summary (e.g. "Liverpool 4-1 over Spurs at Anfield")
+- hashtags: 6-8 with # — include #football #shorts + league tag + team tags + #footballmemes
 - visual_query: 2-3 word Pexels query — generic football imagery only
   (e.g. "football stadium goal", "soccer ball net", "stadium crowd lights")
 """
