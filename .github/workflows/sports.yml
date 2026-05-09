@@ -14,25 +14,56 @@ permissions:
   contents: write   # to commit generation_log.jsonl
 
 jobs:
-  generate:
+  # Phase 1 — generate the script only, upload for review.
+  script:
     runs-on: ubuntu-latest
+    outputs:
+      run_id: ${{ steps.runid.outputs.run_id }}
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      INPUT_SPORT: ${{ github.event.inputs.sport }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11", cache: pip }
+      - run: pip install -r requirements.txt
+      - id: runid
+        run: echo "run_id=sports-$(date -u +%Y%m%d-%H%M%S)" >> "$GITHUB_OUTPUT"
+      - name: Generate script
+        run: python -m generators.${INPUT_SPORT} --run-id "${{ steps.runid.outputs.run_id }}" --stage script
+      - uses: actions/upload-artifact@v4
+        with:
+          name: script-${{ github.event.inputs.sport }}-${{ steps.runid.outputs.run_id }}
+          path: output/${{ steps.runid.outputs.run_id }}/${{ github.event.inputs.sport }}/
+          retention-days: 7
+
+  # Phase 2 — TTS + visuals + assemble, gated on manual approval.
+  video:
+    needs: script
+    runs-on: ubuntu-latest
+    environment: manual-approval
     env:
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+      INPUT_SPORT: ${{ github.event.inputs.sport }}
+      RUN_ID: ${{ needs.script.outputs.run_id }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.11", cache: pip }
       - run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - run: pip install -r requirements.txt
-      - id: runid
-        run: echo "run_id=sports-$(date -u +%Y%m%d-%H%M%S)" >> "$GITHUB_OUTPUT"
-      - name: Generate
-        run: python -m generators.${{ github.event.inputs.sport }} --run-id "${{ steps.runid.outputs.run_id }}"
+      - name: Download approved script
+        uses: actions/download-artifact@v4
+        with:
+          name: script-${{ github.event.inputs.sport }}-${{ env.RUN_ID }}
+          path: output/${{ env.RUN_ID }}/${{ github.event.inputs.sport }}/
+      - name: Build video from approved script
+        run: python -m generators.${INPUT_SPORT} --run-id "$RUN_ID" --stage video
       - uses: actions/upload-artifact@v4
         with:
-          name: video-${{ github.event.inputs.sport }}-${{ steps.runid.outputs.run_id }}
-          path: output/${{ steps.runid.outputs.run_id }}/${{ github.event.inputs.sport }}/
+          name: video-${{ github.event.inputs.sport }}-${{ env.RUN_ID }}
+          path: output/${{ env.RUN_ID }}/${{ github.event.inputs.sport }}/
           retention-days: 7
       - name: Commit generation_log addition
         if: success()

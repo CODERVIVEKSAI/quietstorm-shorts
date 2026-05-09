@@ -110,6 +110,7 @@ def main():
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--edit", default=None, help="Edit instruction; regenerates from previous script")
     parser.add_argument("--previous-script", default=None, help="Path to previous script.json")
+    parser.add_argument("--stage", default="all", choices=["all", "script", "video"])
     args = parser.parse_args()
 
     previous = None
@@ -117,7 +118,7 @@ def main():
         previous = json.loads(Path(args.previous_script).read_text())
 
     used_seed = False
-    if args.edit:
+    if args.edit or args.stage == "video":
         prompt = ""
     else:
         seed = _next_seed_quote()
@@ -127,21 +128,25 @@ def main():
         else:
             prompt = _prompt_fallback()
 
-    out = build(FORMAT, prompt, args.run_id, edit_instruction=args.edit, previous_script=previous)
+    out = build(FORMAT, prompt, args.run_id, edit_instruction=args.edit,
+                previous_script=previous, stage=args.stage)
 
-    # When falling back to Gemini, record the generated quote so we don't repeat it
-    if not args.edit and not used_seed:
-        script_path = out / "script.json"
-        if script_path.exists():
-            spec = json.loads(script_path.read_text())
-            quote_text = spec.get("quote", "").strip()
-            if quote_text:
-                _record_used(quote_text)
+    # State recording only runs when a NEW script was just generated. The video
+    # stage reads an already-approved script.json and would double-record.
+    if args.stage in ("all", "script"):
+        # When falling back to Gemini, record the generated quote so we don't repeat it
+        if not args.edit and not used_seed:
+            script_path = out / "script.json"
+            if script_path.exists():
+                spec = json.loads(script_path.read_text())
+                quote_text = spec.get("quote", "").strip()
+                if quote_text:
+                    _record_used(quote_text)
 
-    # Copy the updated state file into the artifact so the consolidate job
-    # downstream can persist it back to the repo.
-    if STATE_FILE.exists():
-        (out / "quote_state.json").write_text(STATE_FILE.read_text())
+        # Copy the updated state file into the artifact so the consolidate job
+        # downstream can persist it back to the repo.
+        if STATE_FILE.exists():
+            (out / "quote_state.json").write_text(STATE_FILE.read_text())
 
     print(f"Built {FORMAT} at {out}")
 

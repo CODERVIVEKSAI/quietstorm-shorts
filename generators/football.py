@@ -109,17 +109,19 @@ def main():
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--edit", default=None)
     parser.add_argument("--previous-script", default=None)
+    parser.add_argument("--stage", default="all", choices=["all", "script", "video"])
     args = parser.parse_args()
 
     previous = json.loads(Path(args.previous_script).read_text()) if args.previous_script else None
-    if args.edit:
+    if args.edit or args.stage == "video":
         prompt = ""
     else:
         league_id, league_name = _todays_league()
         match = _latest_match(league_id)
         prompt = _prompt(league_name, match)
 
-    out = build(FORMAT, prompt, args.run_id, edit_instruction=args.edit, previous_script=previous)
+    out = build(FORMAT, prompt, args.run_id, edit_instruction=args.edit,
+                previous_script=previous, stage=args.stage)
     print(f"Built {FORMAT} at {out}")
 
 

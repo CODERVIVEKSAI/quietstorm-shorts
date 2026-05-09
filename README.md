@@ -55,7 +55,35 @@ In the repo on GitHub: `Settings → Secrets and variables → Actions → New r
 | `GEMINI_API_KEY` | from step 1 |
 | `PEXELS_API_KEY` | from step 1 |
 
-That's it. No YouTube setup, no OAuth, no environments.
+That's it. No YouTube setup, no OAuth.
+
+### 3a. Set up the manual-approval gate (required)
+
+Every workflow runs in two phases: it generates the **script first**, pauses for
+your approval, and only then runs **TTS + video assembly**. This stops bad
+scripts from burning Gemini/TTS quota and gives you a chance to review the text
+before audio is produced.
+
+To wire up the approval gate, create a GitHub environment:
+
+1. Repo → `Settings → Environments → New environment`.
+2. Name it exactly **`manual-approval`** (the workflows reference this name).
+3. Tick **Required reviewers** and add yourself.
+4. Save.
+
+Now when a workflow runs, GitHub will:
+
+1. Run the `script` job → upload `script-<format>-<run-id>` artifact.
+2. Pause and email/notify you that an approval is required.
+3. Click **Review deployments → manual-approval → Approve** to continue, or
+   **Reject** to abort. Download the `script-*` artifact first to read
+   `script.json` if you want to preview the text before deciding.
+4. The `video` job runs only after approval, downloads the same script, and
+   produces the final MP4 (uploaded as `video-<format>-<run-id>`).
+
+If you skip this setup the workflow will still run, but it won't actually pause
+— it'll just chain `script → video` automatically. The pause is enforced by the
+environment's required-reviewers rule.
 
 ### 4. Background music & ASMR per format
 

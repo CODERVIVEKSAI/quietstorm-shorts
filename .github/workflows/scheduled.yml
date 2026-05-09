@@ -15,29 +15,25 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  generate:
+  # Phase 1 — generate scripts only. Cheap (one Gemini call per format) and
+  # uploads each script.json as an artifact for review before TTS/video runs.
+  script:
     runs-on: ubuntu-latest
+    outputs:
+      run_id: ${{ steps.runid.outputs.run_id }}
     strategy:
       fail-fast: false
       max-parallel: 2   # 2 at a time stays under Gemini's 15 RPM
       matrix:
         format: [quote, what_if, joke, golden_lady]
-        # Sports (football, cricket) moved to .github/workflows/sports.yml
-        # — manual-trigger only, saves Gemini quota for the reliable daily 4
     env:
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-      PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: pip
-
-      - name: Install ffmpeg
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg
-
       - name: Install Python deps
         run: pip install -r requirements.txt
 
@@ -45,18 +41,61 @@ jobs:
         id: runid
         run: echo "run_id=$(date -u +%Y%m%d)" >> "$GITHUB_OUTPUT"
 
-      - name: Generate ${{ matrix.format }}
-        run: python -m generators.${{ matrix.format }} --run-id "${{ steps.runid.outputs.run_id }}"
+      - name: Generate ${{ matrix.format }} script
+        run: python -m generators.${{ matrix.format }} --run-id "${{ steps.runid.outputs.run_id }}" --stage script
+
+      - name: Upload script artifact for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: script-${{ matrix.format }}-${{ steps.runid.outputs.run_id }}
+          path: output/${{ steps.runid.outputs.run_id }}/${{ matrix.format }}/
+          retention-days: 7
+
+  # Phase 2 — TTS + visuals + assemble. Gated by the `manual-approval`
+  # environment: GitHub will pause here and ask the configured reviewer to
+  # approve before any audio/video is generated. Reject to abort.
+  video:
+    needs: script
+    runs-on: ubuntu-latest
+    environment: manual-approval
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        format: [quote, what_if, joke, golden_lady]
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+      RUN_ID: ${{ needs.script.outputs.run_id }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Install Python deps
+        run: pip install -r requirements.txt
+
+      - name: Download approved script
+        uses: actions/download-artifact@v4
+        with:
+          name: script-${{ matrix.format }}-${{ env.RUN_ID }}
+          path: output/${{ env.RUN_ID }}/${{ matrix.format }}/
+
+      - name: Build video from approved script
+        run: python -m generators.${{ matrix.format }} --run-id "$RUN_ID" --stage video
 
       - name: Upload MP4 + script + captions as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: video-${{ matrix.format }}-${{ steps.runid.outputs.run_id }}
-          path: output/${{ steps.runid.outputs.run_id }}/${{ matrix.format }}/
+          name: video-${{ matrix.format }}-${{ env.RUN_ID }}
+          path: output/${{ env.RUN_ID }}/${{ matrix.format }}/
           retention-days: 7
 
   consolidate:
-    needs: generate
+    needs: video
     runs-on: ubuntu-latest
     if: always()  # run even if some matrix jobs failed — partial state is still useful
     steps:

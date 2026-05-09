@@ -11,30 +11,51 @@ from lib import history
 
 
 def build(format_name: str, prompt: str, run_id: str, edit_instruction: str | None = None,
-          previous_script: dict | None = None, voice_override: str | None = None) -> Path:
-    """Run the full pipeline for one video. Returns the path to the output directory
-    (containing video.mp4 and metadata.json)."""
+          previous_script: dict | None = None, voice_override: str | None = None,
+          stage: str = "all") -> Path:
+    """Run the pipeline for one video. Returns the path to the output directory.
+
+    `stage` selects which phases run:
+      - "all"    — full pipeline (script -> tts -> visuals -> assemble)
+      - "script" — only step 1 (writes script.json, then returns)
+      - "video"  — skip step 1; load existing script.json from out_dir, then run 2-6.
+                   Used by the two-stage GitHub workflows that gate audio/video on
+                   manual approval after the script is generated.
+    """
+    if stage not in ("all", "script", "video"):
+        raise ValueError(f"unknown stage: {stage!r}")
 
     out_dir = OUTPUT_DIR / run_id / format_name
     out_dir.mkdir(parents=True, exist_ok=True)
+    script_path = out_dir / "script.json"
 
-    # 1. Script — every prompt gets the channel-wide writing rules,
-    # the "avoid these recent topics" history, and any learned preferences.
-    if edit_instruction and previous_script:
-        spec = script_lib.edit(previous_script, edit_instruction, format_name)
+    if stage in ("all", "script"):
+        # 1. Script — every prompt gets the channel-wide writing rules,
+        # the "avoid these recent topics" history, and any learned preferences.
+        if edit_instruction and previous_script:
+            spec = script_lib.edit(previous_script, edit_instruction, format_name)
+        else:
+            full_prompt = WRITING_RULES + "\n" + prompt.rstrip()
+            avoid = history.avoid_block(format_name)
+            if avoid:
+                full_prompt += "\n" + avoid
+            prefs = preferences_block(format_name)
+            if prefs:
+                full_prompt += "\n" + prefs
+            spec = script_lib.generate(full_prompt)
+
+        script_path.write_text(json.dumps(spec, indent=2))
+
+        if stage == "script":
+            return out_dir
     else:
-        full_prompt = WRITING_RULES + "\n" + prompt.rstrip()
-        avoid = history.avoid_block(format_name)
-        if avoid:
-            full_prompt += "\n" + avoid
-        prefs = preferences_block(format_name)
-        if prefs:
-            full_prompt += "\n" + prefs
-        spec = script_lib.generate(full_prompt)
-        # Record this title so we don't repeat it next time
-        history.record(format_name, spec.get("title", ""), spec.get("premise", "") or spec.get("quote", ""))
-
-    (out_dir / "script.json").write_text(json.dumps(spec, indent=2))
+        # stage == "video": pick up where the script-only run left off.
+        if not script_path.exists():
+            raise FileNotFoundError(
+                f"stage='video' but no script.json at {script_path}. "
+                "Run stage='script' first (or download the script artifact)."
+            )
+        spec = json.loads(script_path.read_text())
 
     # 2. TTS (voiceover + SRT)
     audio_path = out_dir / "voice.mp3"
@@ -72,6 +93,11 @@ def build(format_name: str, prompt: str, run_id: str, edit_instruction: str | No
         "video_path": str(video_path),
     }
     (out_dir / "metadata.json").write_text(json.dumps(metadata, indent=2))
+
+    # Record this title so future runs' "AVOID THESE" prompt block knows about it.
+    # Done after a successful build (not at script stage) so rejected/never-built
+    # scripts don't pollute the history.
+    history.record(format_name, spec.get("title", ""), spec.get("premise", "") or spec.get("quote", ""))
 
     # 6. Drop intermediate files — captions are burned into the video and audio is
     # baked into the mp4. Keeping these in the artifact doubles its size for no benefit.

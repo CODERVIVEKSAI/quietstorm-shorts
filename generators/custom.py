@@ -87,7 +87,7 @@ Return JSON with these exact keys:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--run-id", required=True)
-    parser.add_argument("--prompt", required=True, help="Free-form topic/request")
+    parser.add_argument("--prompt", required=False, default="", help="Free-form topic/request")
     parser.add_argument("--tone", default="auto", choices=list(TONES.keys()))
     parser.add_argument("--length", default="medium", choices=list(LENGTHS.keys()))
     parser.add_argument("--visual-style", default="auto", choices=list(VISUAL_HINTS.keys()))
@@ -95,10 +95,14 @@ def main():
     parser.add_argument("--voice", default="auto", choices=list(VOICE_OVERRIDES.keys()))
     parser.add_argument("--edit", default=None)
     parser.add_argument("--previous-script", default=None)
+    parser.add_argument("--stage", default="all", choices=["all", "script", "video"])
     args = parser.parse_args()
 
+    if args.stage != "video" and not args.edit and not args.prompt:
+        parser.error("--prompt is required when generating a new script")
+
     previous = json.loads(Path(args.previous_script).read_text()) if args.previous_script else None
-    if args.edit:
+    if args.edit or args.stage == "video":
         prompt = ""
     else:
         prompt = _wrap(args.prompt, args.tone, args.length, args.visual_style, args.mood)
@@ -108,7 +112,7 @@ def main():
     out = build(
         FORMAT, prompt, args.run_id,
         edit_instruction=args.edit, previous_script=previous,
-        voice_override=voice_override,
+        voice_override=voice_override, stage=args.stage,
     )
     print(f"Built {FORMAT} at {out}")
 

@@ -42,26 +42,26 @@ permissions:
   contents: write   # to commit generation_log.jsonl
 
 jobs:
-  generate:
+  # Phase 1 — generate the script only, upload for review.
+  script:
     runs-on: ubuntu-latest
+    outputs:
+      run_id: ${{ steps.runid.outputs.run_id }}
     env:
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-      PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
       INPUT_PROMPT: ${{ github.event.inputs.prompt }}
       INPUT_TONE: ${{ github.event.inputs.tone }}
       INPUT_LENGTH: ${{ github.event.inputs.length }}
       INPUT_VISUAL: ${{ github.event.inputs.visual_style }}
       INPUT_MOOD: ${{ github.event.inputs.mood }}
-      INPUT_VOICE: ${{ github.event.inputs.voice }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.11", cache: pip }
-      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - run: pip install -r requirements.txt
       - id: runid
         run: echo "run_id=custom-$(date -u +%Y%m%d-%H%M%S)" >> "$GITHUB_OUTPUT"
-      - name: Generate
+      - name: Generate script
         run: |
           python -m generators.custom \
             --run-id "${{ steps.runid.outputs.run_id }}" \
@@ -70,11 +70,43 @@ jobs:
             --length "$INPUT_LENGTH" \
             --visual-style "$INPUT_VISUAL" \
             --mood "$INPUT_MOOD" \
-            --voice "$INPUT_VOICE"
+            --stage script
       - uses: actions/upload-artifact@v4
         with:
-          name: video-custom-${{ steps.runid.outputs.run_id }}
+          name: script-custom-${{ steps.runid.outputs.run_id }}
           path: output/${{ steps.runid.outputs.run_id }}/custom/
+          retention-days: 7
+
+  # Phase 2 — TTS + visuals + assemble, gated on manual approval.
+  video:
+    needs: script
+    runs-on: ubuntu-latest
+    environment: manual-approval
+    env:
+      PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+      INPUT_VOICE: ${{ github.event.inputs.voice }}
+      RUN_ID: ${{ needs.script.outputs.run_id }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11", cache: pip }
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - run: pip install -r requirements.txt
+      - name: Download approved script
+        uses: actions/download-artifact@v4
+        with:
+          name: script-custom-${{ env.RUN_ID }}
+          path: output/${{ env.RUN_ID }}/custom/
+      - name: Build video from approved script
+        run: |
+          python -m generators.custom \
+            --run-id "$RUN_ID" \
+            --voice "$INPUT_VOICE" \
+            --stage video
+      - uses: actions/upload-artifact@v4
+        with:
+          name: video-custom-${{ env.RUN_ID }}
+          path: output/${{ env.RUN_ID }}/custom/
           retention-days: 7
 
       - name: Commit generation_log addition
