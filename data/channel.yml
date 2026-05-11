@@ -9,9 +9,8 @@ display_name: "QuietStorm"
 tagline: "Work hard in silence. Let your success be your noise."
 
 # Default voice used by every format unless a generator overrides it.
-# Picked for the "typical YouTube Shorts" energetic narrator vibe.
-# To swap, change the value below — see voices/Shorts notes at bottom.
-default_voice: "en-US-AndrewMultilingualNeural"
+# Adam Multilingual is the newer Edge voice — most natural conversational male.
+default_voice: "en-US-AdamMultilingualNeural"
 
 # Short 9:16 video dimensions (YouTube Shorts requirement)
 video:
@@ -20,15 +19,38 @@ video:
   fps: 30
   max_duration_seconds: 60   # YouTube Shorts hard ceiling
 
-# Per-format voice overrides — male-only, Shorts-energy picks
+# Per-format voice overrides — picked for character, not just clarity.
+# The Multilingual neural voices have the most natural prosody.
 voices:
-  quote: "en-US-AndrewMultilingualNeural"   # warm, modern male — reflective but not stiff
+  quote: "en-US-AndrewMultilingualNeural"   # warm reflective male, slight gravitas
   what_if: "en-US-BrianMultilingualNeural"  # young energetic male, viral-Shorts feel
-  joke: "en-US-ChristopherNeural"           # friendly conversational male, comedic timing
-  golden_lady: "en-US-AndrewMultilingualNeural"  # warm, natural male — same voice as quote
+  joke: "en-US-AdamMultilingualNeural"      # NEWER — super natural conversational, lands punchlines
+  golden_lady: "en-IN-AaravNeural"          # NEWER Indian English male, warm
+  cricket: "en-IN-AaravNeural"              # NEWER Indian English — fan-culture voice
+  football: "en-US-AdamMultilingualNeural"  # commentator energy
 
 # Per-format speech rate. Negative = slower, positive = faster. Format: "+0%", "-7%".
-rates: {}
+rates:
+  quote: "-3%"          # contemplative
+  what_if: "+0%"
+  joke: "+2%"           # punchy timing
+  golden_lady: "+0%"
+  cricket: "+4%"        # hyped fan-Twitter energy
+  football: "+3%"
+
+# Per-format pitch offset, in Hz. Range roughly -50Hz to +50Hz; small moves are
+# what you want. Negative = deeper voice (gravitas), positive = higher (energy).
+# Empty / missing → "+0Hz" (no change).
+pitches:
+  quote: "-3Hz"         # slightly lower, reflective
+  what_if: "+4Hz"       # higher, curious energy
+  joke: "+0Hz"          # natural
+  golden_lady: "-1Hz"   # warm, grounded
+  cricket: "+3Hz"       # hyped
+  football: "+4Hz"
+
+# Per-format volume offset, "+0%" default. Bumps perceived loudness.
+volumes: {}
 
 # === Voice swap reference ===
 # Shorts-style energetic:    en-US-EmmaMultilingualNeural, en-US-AvaMultilingualNeural,

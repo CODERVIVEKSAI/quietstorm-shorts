@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from lib import script as script_lib
 from lib import tts, visuals, assemble
-from lib.config import load_channel, voice_for, rate_for, OUTPUT_DIR
+from lib.config import load_channel, voice_for, rate_for, pitch_for, volume_for, OUTPUT_DIR
 from lib.preferences import preferences_block
 from lib.style import WRITING_RULES
 from lib import history
@@ -95,11 +95,21 @@ def build(format_name: str, prompt: str, run_id: str, edit_instruction: str | No
             )
         spec = json.loads(script_path.read_text())
 
-    # 2. TTS (voiceover + SRT)
+    # 2. TTS (voiceover + SRT). Pitch/volume/emphasis are what make the
+    # voice feel like a person performing rather than a TTS box reading.
     audio_path = out_dir / "voice.mp3"
     srt_path = out_dir / "captions.srt"
     voice = voice_override or voice_for(format_name)
-    tts.synthesize(spec["script"], voice, audio_path, srt_path, rate=rate_for(format_name))
+    emphasis = spec.get("emphasis_phrases") or []
+    if not isinstance(emphasis, list):
+        emphasis = []
+    tts.synthesize(
+        spec["script"], voice, audio_path, srt_path,
+        rate=rate_for(format_name),
+        pitch=pitch_for(format_name),
+        volume=volume_for(format_name),
+        emphasis_phrases=emphasis,
+    )
 
     # 3. Visuals — one Pexels clip per beat-aligned query the model emitted.
     # We always append the format name as a final fallback query so even if

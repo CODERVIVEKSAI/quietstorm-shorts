@@ -54,7 +54,25 @@ WRITING_RULES = """\
    No stage directions, no [pause] markers, no speaker labels, no SFX cues.
    Punctuation is your only stage direction.
 
-8. B-ROLL VISUAL QUERIES — return MULTIPLE.
+8. EMPHASIS PHRASES — tell the voice which lines to punch.
+   In your JSON output, ALSO include an "emphasis_phrases" field: a list of
+   2-4 short EXACT phrases from your script that should be delivered with
+   extra weight (slowed, slightly raised pitch) — the reveals, payoffs, and
+   killer hooks. Each phrase must appear VERBATIM in your script field
+   (the TTS engine finds it via case-insensitive substring match — case
+   matters for everything else, so keep them clean).
+   Pick the lines that, if you were performing this script live, you'd
+   pause briefly before and lean into. NOT the whole sentence — just the
+   memorable 3-8 word fragment.
+   Examples of good emphasis_phrases:
+       ["this changes everything", "not a single one"]
+       ["only one survived", "and that's the wild part"]
+       ["it took six seconds"]
+   Examples of BAD ones (too long, too generic):
+       ["the entire universe is made of atoms which means that..."]
+       ["you", "the"]
+
+9. B-ROLL VISUAL QUERIES — return MULTIPLE.
    In your JSON output, ALSO include a "visual_queries" field: an ORDERED
    list of 3-8 distinct 2-3-word Pexels stock-footage search queries, one
    per BEAT of your script. The list order must follow the script's flow:

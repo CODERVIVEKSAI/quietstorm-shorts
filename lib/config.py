@@ -30,6 +30,19 @@ def rate_for(format_name: str) -> str:
     return cfg.get("rates", {}).get(format_name, "+0%")
 
 
+def pitch_for(format_name: str) -> str:
+    """Per-format pitch offset, e.g. '-3Hz' (deeper) or '+5Hz' (higher).
+    Falls back to '+0Hz'."""
+    cfg = load_channel()
+    return cfg.get("pitches", {}).get(format_name, "+0Hz")
+
+
+def volume_for(format_name: str) -> str:
+    """Per-format volume offset, e.g. '+10%'. Falls back to '+0%'."""
+    cfg = load_channel()
+    return cfg.get("volumes", {}).get(format_name, "+0%")
+
+
 def video_dims():
     cfg = load_channel()
     v = cfg["video"]
