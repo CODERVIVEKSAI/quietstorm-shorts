@@ -48,31 +48,91 @@ def _retry_delay_from(err: Exception) -> float:
     return 30.0
 
 
+def _build_grounded_model(model_name: str):
+    """Build a Gemini model with Google Search grounding enabled. Tries the
+    Gemini 2.x `google_search` tool first (via several SDK paths because the
+    0.8.x google-generativeai SDK exposes it inconsistently), then falls back
+    to the 1.5-era `google_search_retrieval` string shortcut. Returns None if
+    no grounding option is available — caller falls back to plain generation."""
+    # Path A — gapic library directly (most reliable in 0.8.x)
+    try:
+        import google.ai.generativelanguage_v1beta as glm  # type: ignore
+        if hasattr(glm, "GoogleSearch") and hasattr(glm, "Tool"):
+            tool = glm.Tool(google_search=glm.GoogleSearch())
+            return genai.GenerativeModel(model_name, tools=[tool])
+    except Exception as e:
+        print(f"[grounded] glm google_search failed: {e}")
+
+    # Path B — genai.protos
+    try:
+        from google.generativeai import protos  # type: ignore
+        if hasattr(protos, "GoogleSearch"):
+            tool = protos.Tool(google_search=protos.GoogleSearch())
+            return genai.GenerativeModel(model_name, tools=[tool])
+    except Exception as e:
+        print(f"[grounded] protos google_search failed: {e}")
+
+    # Path C — dict form
+    try:
+        return genai.GenerativeModel(model_name, tools=[{"google_search": {}}])
+    except Exception as e:
+        print(f"[grounded] dict google_search failed: {e}")
+
+    # Path D — old 1.5 tool (works only for 1.5 models; 2.x will reject at request time)
+    try:
+        return genai.GenerativeModel(model_name, tools="google_search_retrieval")
+    except Exception as e:
+        print(f"[grounded] google_search_retrieval string failed: {e}")
+
+    print("[grounded] no grounding tool available; falling back to non-grounded generation")
+    return None
+
+
+def _is_grounding_unsupported_error(err: Exception) -> bool:
+    msg = str(err).lower()
+    return (
+        "google_search" in msg
+        or "tool" in msg and "not supported" in msg
+    )
+
+
 def _call(prompt: str, *, grounded: bool, label: str) -> dict:
-    """Single Gemini call with retry + model fallback. `grounded=True` enables
-    the Google Search tool so the model can look things up before writing."""
+    """Single Gemini call with retry + model fallback. `grounded=True` asks
+    the SDK to enable Google Search grounding; if the API rejects the
+    grounding tool at request time, we retry the SAME prompt without
+    grounding rather than failing the whole script job."""
     _configure()
     last_err = None
     for model_name in _MODEL_CANDIDATES:
         for attempt in range(2):
+            grounded_attempt = grounded
             try:
-                kwargs = {}
-                if grounded:
-                    # Gemini 2.x grounding tool. Try the string shortcut first
-                    # (newer SDK), fall back to the proto form (older 0.8.x).
-                    try:
-                        kwargs["tools"] = "google_search_retrieval"
-                        model = genai.GenerativeModel(model_name, **kwargs)
-                    except Exception:
-                        from google.generativeai import protos  # type: ignore
-                        kwargs["tools"] = [protos.Tool(
-                            google_search_retrieval=protos.GoogleSearchRetrieval()
-                        )]
-                        model = genai.GenerativeModel(model_name, **kwargs)
+                if grounded_attempt:
+                    model = _build_grounded_model(model_name)
+                    if model is None:
+                        grounded_attempt = False
+                        model = genai.GenerativeModel(model_name)
                 else:
                     model = genai.GenerativeModel(model_name)
                 resp = model.generate_content(prompt)
                 return _extract_json(resp.text)
+            except gax.InvalidArgument as e:
+                # Most common case: API rejected the grounding tool for this
+                # model. Recover by retrying the same call non-grounded.
+                if grounded_attempt and _is_grounding_unsupported_error(e):
+                    print(f"[{label}] {model_name} rejected grounding tool ({e}); "
+                          "retrying non-grounded on same model")
+                    try:
+                        model = genai.GenerativeModel(model_name)
+                        resp = model.generate_content(prompt)
+                        return _extract_json(resp.text)
+                    except Exception as inner:
+                        last_err = inner
+                        # fall through to next attempt / next model
+                else:
+                    last_err = e
+                    print(f"[{label}] {model_name} invalid argument ({e}); trying next model…")
+                    break
             except gax.ResourceExhausted as e:
                 last_err = e
                 wait = min(45.0, _retry_delay_from(e) + random.uniform(0, 5))
@@ -85,6 +145,11 @@ def _call(prompt: str, *, grounded: bool, label: str) -> dict:
                       "trying next model…")
                 last_err = e
                 break
+            except (ValueError, json.JSONDecodeError) as e:
+                last_err = e
+                print(f"[{label}] {model_name} returned malformed JSON; retrying…")
+                time.sleep(2)
+                continue
     raise last_err if last_err else RuntimeError("no Gemini model succeeded")
 
 
