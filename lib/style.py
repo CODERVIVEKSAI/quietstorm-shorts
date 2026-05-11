@@ -53,4 +53,21 @@ WRITING_RULES = """\
    The "script" field must be a single string of voiceover text only.
    No stage directions, no [pause] markers, no speaker labels, no SFX cues.
    Punctuation is your only stage direction.
+
+8. B-ROLL VISUAL QUERIES — return MULTIPLE.
+   In your JSON output, ALSO include a "visual_queries" field: an ORDERED
+   list of 3-8 distinct 2-3-word Pexels stock-footage search queries, one
+   per BEAT of your script. The list order must follow the script's flow:
+       index 0  → hook / opening
+       index 1  → setup
+       middle   → main point, example, twist
+       last     → closer / payoff
+   Use 3 queries for slow/contemplative scripts (quote, ASMR), 5-6 for
+   typical pacing, 7-8 for fast/dense scripts (jokes, sports recaps).
+   Each query must be VISUALLY DIFFERENT from the others — do NOT return
+   five variations of "person running" or "city night". Pick concrete
+   nouns + actions that Pexels actually has footage of (e.g. "sunrise
+   mountain", "coffee pouring", "office workers", "lightning storm").
+   The old singular "visual_query" field is no longer used — return
+   "visual_queries" instead.
 """

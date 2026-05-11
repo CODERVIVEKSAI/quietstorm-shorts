@@ -17,6 +17,19 @@ from lib import history
 # is a category error.
 GROUNDED_FORMATS = {"what_if", "quote", "cricket", "football", "golden_lady", "custom"}
 
+# Per-format transition style for the video assembler. Punchy formats (jokes,
+# sports recaps) get hard cuts so they hit on the beat; everything else gets
+# a soft crossfade. New formats default to crossfade.
+TRANSITION_BY_FORMAT = {
+    "joke": "cut",
+    "cricket": "cut",
+    "football": "cut",
+    "quote": "crossfade",
+    "what_if": "crossfade",
+    "golden_lady": "crossfade",
+    "custom": "crossfade",
+}
+
 
 def build(format_name: str, prompt: str, run_id: str, edit_instruction: str | None = None,
           previous_script: dict | None = None, voice_override: str | None = None,
@@ -88,16 +101,27 @@ def build(format_name: str, prompt: str, run_id: str, edit_instruction: str | No
     voice = voice_override or voice_for(format_name)
     tts.synthesize(spec["script"], voice, audio_path, srt_path, rate=rate_for(format_name))
 
-    # 3. Visuals
-    query = spec.get("visual_query", format_name)
-    clips_dir = out_dir / "clips"
-    clips = visuals.fetch_videos(query, clips_dir, count=2)
-    if not clips:
-        # Fallback: photos (assemble.py treats them same way via ffmpeg input; keep minimal MVP:
-        # if zero clips, raise so the workflow fails loudly rather than ship a broken video.)
-        raise RuntimeError(f"No Pexels videos found for query: {query!r}")
+    # 3. Visuals — one Pexels clip per beat-aligned query the model emitted.
+    # We always append the format name as a final fallback query so even if
+    # every model-emitted query misses Pexels, we still end up with at least
+    # one usable clip.
+    queries = spec.get("visual_queries") or []
+    if not queries:
+        # Back-compat: older scripts emit a single visual_query string
+        legacy = spec.get("visual_query")
+        if legacy:
+            queries = [legacy]
+    queries = [q for q in queries if isinstance(q, str) and q.strip()]
+    queries.append(format_name.replace("_", " "))  # last-ditch fallback
+    # De-dupe while preserving order
+    queries = list(dict.fromkeys(queries))
 
-    # 4. Assemble
+    clips_dir = out_dir / "clips"
+    clips = visuals.fetch_videos_multi(queries, clips_dir)
+    if not clips:
+        raise RuntimeError(f"No Pexels videos found for any of: {queries!r}")
+
+    # 4. Assemble — transition style depends on format mood.
     video_path = out_dir / "video.mp4"
     assemble.assemble(
         clips=clips,
@@ -105,6 +129,7 @@ def build(format_name: str, prompt: str, run_id: str, edit_instruction: str | No
         srt=srt_path,
         output=video_path,
         music=assemble.find_music(format_name),
+        transition=TRANSITION_BY_FORMAT.get(format_name, "crossfade"),
     )
 
     # 5. Metadata + suggested YouTube fields (so you can copy-paste at upload time)
