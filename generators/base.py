@@ -8,6 +8,16 @@ from lib.config import load_channel, voice_for, rate_for, OUTPUT_DIR
 from lib.preferences import preferences_block
 from lib.style import WRITING_RULES
 from lib import history
+from lib import factcheck
+
+# Formats whose scripts go through the fact-check loop before audio/video
+# is built. Jokes are deliberately absurd so they're skipped — verifying
+# "what if everyone in the group chat went silent" is a category error.
+FACT_CHECK_FORMATS = {"what_if", "quote", "cricket", "football", "golden_lady", "custom"}
+
+# Cap on how many revise→re-verify rounds we'll do. Without a cap, a script
+# that makes one un-Google-able claim could loop forever.
+MAX_FACT_CHECK_ITERATIONS = 5
 
 
 def build(format_name: str, prompt: str, run_id: str, edit_instruction: str | None = None,
@@ -43,6 +53,38 @@ def build(format_name: str, prompt: str, run_id: str, edit_instruction: str | No
             if prefs:
                 full_prompt += "\n" + prefs
             spec = script_lib.generate(full_prompt)
+
+        # Fact-check loop. Only fact-heavy formats go through it, and only when
+        # a NEW script was generated (edit instructions get re-verified too —
+        # the edit could have introduced new false claims). Two independent
+        # passes per round; we revise until both say clean, or until we hit
+        # MAX_FACT_CHECK_ITERATIONS and fail loudly so the bad script doesn't
+        # silently make it through to the approval gate.
+        fc_report = None
+        if format_name in FACT_CHECK_FORMATS:
+            for iteration in range(1, MAX_FACT_CHECK_ITERATIONS + 1):
+                print(f"[factcheck] {format_name} iteration {iteration}/{MAX_FACT_CHECK_ITERATIONS}")
+                report = factcheck.verify_twice(spec.get("script", ""), format_name)
+                report["_iteration"] = iteration
+                fc_report = report
+                if report["ok"]:
+                    print(f"[factcheck] {format_name} verified clean on iteration {iteration}")
+                    break
+                if iteration == MAX_FACT_CHECK_ITERATIONS:
+                    # Save the report so the user can see what kept failing,
+                    # then raise so the workflow fails the script job.
+                    (out_dir / "factcheck.json").write_text(json.dumps(report, indent=2))
+                    (out_dir / "script.json").write_text(json.dumps(spec, indent=2))
+                    raise RuntimeError(
+                        f"fact-check did not converge for {format_name} after "
+                        f"{MAX_FACT_CHECK_ITERATIONS} iterations. "
+                        f"Remaining issues: {report.get('issues')}"
+                    )
+                print(f"[factcheck] {format_name} found {len(report.get('issues', []))} "
+                      f"issue(s); revising and re-checking…")
+                spec = script_lib.revise_for_facts(spec, report.get("issues", []), format_name)
+
+            (out_dir / "factcheck.json").write_text(json.dumps(fc_report, indent=2))
 
         script_path.write_text(json.dumps(spec, indent=2))
 

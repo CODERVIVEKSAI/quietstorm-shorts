@@ -89,3 +89,30 @@ EDIT INSTRUCTION: {edit_instruction}
 Return ONLY the revised JSON, no prose.
 """
     return generate(prompt)
+
+
+def revise_for_facts(previous: dict, issues: list[str], format_hint: str) -> dict:
+    """Regenerate a script after a fact-check turned up problems. Feeds the
+    list of specific factual issues back to Gemini and asks it to rewrite the
+    script so each issue is fixed, while keeping the same JSON shape and tone.
+    Used by the fact-check loop in generators/base.py."""
+    from .style import WRITING_RULES
+    issues_block = "\n".join(f"- {i}" for i in issues) if issues else "- (none)"
+    prompt = f"""{WRITING_RULES}
+
+You previously generated this {format_hint} script as JSON:
+
+{json.dumps(previous, indent=2)}
+
+A fact-check pass against Google Search found these factual problems with
+your script. Rewrite the script so EVERY one of these is fixed. Do not
+introduce new factual claims you cannot verify. When in doubt, write more
+conservatively (vaguer numbers, fewer specific names) rather than guessing.
+
+FACT-CHECK ISSUES TO FIX:
+{issues_block}
+
+Return ONLY the revised JSON in the SAME shape (same keys) as the original,
+no prose, no markdown fences.
+"""
+    return generate(prompt)
