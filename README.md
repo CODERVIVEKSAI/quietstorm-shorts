@@ -85,32 +85,32 @@ If you skip this setup the workflow will still run, but it won't actually pause
 — it'll just chain `script → video` automatically. The pause is enforced by the
 environment's required-reviewers rule.
 
-### 3b. Fact-check loop (automatic)
+### 3b. Grounded fact-checked generation (automatic)
 
-Before the script gets uploaded for your approval, it goes through an automatic
-fact-check using Gemini with Google Search grounding. Two **independent**
-verification passes both have to agree every factual claim in the script is
-backed by a real web source before the script is considered clean.
+For fact-heavy formats, scripts are generated in a single grounded Gemini call:
+the model is given access to Google Search, instructed to **research the topic
+and verify every factual claim against real sources before writing**, and
+then writes the script using only what it could verify. Each concrete claim
+in the script comes back with a source URL.
 
-If any claim is contradicted or unverifiable, the script is **automatically
-rewritten** (Gemini gets the list of specific issues and a "rewrite this so
-each is fixed" instruction), then re-verified. This loop runs up to 5 times
-per script. If the script still can't be verified after 5 attempts, the
-`script` job **fails** and surfaces the remaining issues in `factcheck.json` —
-no bad info ever reaches the approval gate.
+If a fact can't be verified in 2-3 search queries, the prompt instructs the
+model to swap it for something it CAN verify (vaguer wording, different
+example) rather than guessing. The whole "research → verify → write" cycle
+happens in one API call — no separate verify loop, no retry burn on Gemini
+quota.
 
-Which formats get fact-checked: `what_if`, `quote`, `cricket`, `football`,
-`golden_lady`, `custom`. Skipped: `joke` (jokes are deliberately absurd).
+Which formats get grounded generation: `what_if`, `quote`, `cricket`,
+`football`, `golden_lady`, `custom`. Skipped: `joke` (deliberately absurd
+premises — grounding is a category error).
 
 When you download the script artifact for review, you'll find:
 
-- `script.json` — the (now fact-clean) script
-- `factcheck.json` — the verification report from both passes, including the
-  list of claims, their verdicts (`verified` / `unverified` / `contradicted`),
-  evidence summaries, and source URLs
+- `script.json` — the (verified-clean) script
+- `factcheck.json` — list of every factual claim Gemini made and the URL of
+  the source it grounded the claim in
 
-Read `factcheck.json` if you want to see *why* the script is trustworthy before
-you approve the audio/video build.
+Read `factcheck.json` to confirm the claims check out before you click
+**Approve and deploy**.
 
 ### 4. Background music & ASMR per format
 

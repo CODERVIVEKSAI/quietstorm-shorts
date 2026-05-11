@@ -48,28 +48,135 @@ def _retry_delay_from(err: Exception) -> float:
     return 30.0
 
 
-def generate(prompt: str) -> dict:
-    """Generate one script. With matrix running serially we should rarely hit
-    rate limits, so retry once with a short wait then move on."""
+def _call(prompt: str, *, grounded: bool, label: str) -> dict:
+    """Single Gemini call with retry + model fallback. `grounded=True` enables
+    the Google Search tool so the model can look things up before writing."""
     _configure()
     last_err = None
     for model_name in _MODEL_CANDIDATES:
         for attempt in range(2):
             try:
-                model = genai.GenerativeModel(model_name)
+                kwargs = {}
+                if grounded:
+                    # Gemini 2.x grounding tool. Try the string shortcut first
+                    # (newer SDK), fall back to the proto form (older 0.8.x).
+                    try:
+                        kwargs["tools"] = "google_search_retrieval"
+                        model = genai.GenerativeModel(model_name, **kwargs)
+                    except Exception:
+                        from google.generativeai import protos  # type: ignore
+                        kwargs["tools"] = [protos.Tool(
+                            google_search_retrieval=protos.GoogleSearchRetrieval()
+                        )]
+                        model = genai.GenerativeModel(model_name, **kwargs)
+                else:
+                    model = genai.GenerativeModel(model_name)
                 resp = model.generate_content(prompt)
                 return _extract_json(resp.text)
             except gax.ResourceExhausted as e:
                 last_err = e
                 wait = min(45.0, _retry_delay_from(e) + random.uniform(0, 5))
-                print(f"[script] {model_name} rate-limited; waiting {wait:.0f}s (attempt {attempt + 1}/2)…")
+                print(f"[{label}] {model_name} rate-limited; waiting {wait:.0f}s "
+                      f"(attempt {attempt + 1}/2)…")
                 time.sleep(wait)
                 continue
             except (gax.NotFound, gax.PermissionDenied) as e:
-                print(f"[script] {model_name} unusable ({type(e).__name__}); trying next model…")
+                print(f"[{label}] {model_name} unusable ({type(e).__name__}); "
+                      "trying next model…")
                 last_err = e
                 break
     raise last_err if last_err else RuntimeError("no Gemini model succeeded")
+
+
+def generate(prompt: str) -> dict:
+    """Plain Gemini generation (no grounding). Used for `joke` only — jokes
+    are deliberately absurd so web grounding is a category error."""
+    return _call(prompt, grounded=False, label="script")
+
+
+# Per-format guidance for the grounded research-then-write call. Tells the
+# model what counts as a "factual claim" vs. legitimate creative content for
+# each format, so it doesn't try to fact-check a hypothetical or an opinion.
+_GROUNDED_NOTES = {
+    "what_if": (
+        "The 'what if X' premise itself is hypothetical and does NOT need "
+        "verification. EVERY piece of physics, biology, math, or real-world "
+        "comparison you use to ANSWER the hypothetical MUST be grounded in "
+        "search results before you write it. If you can't find a source "
+        "for a number or fact, don't use that number — pick something you can "
+        "verify, or phrase it vaguely."
+    ),
+    "quote": (
+        "Search to verify the quote actually exists in the form you're using "
+        "and that its attribution is correct. Misattributed quotes (fake "
+        "Einstein, fake Twain, fake Buddha) are the #1 failure here. If you "
+        "cannot find a reliable source attributing the quote to the named "
+        "person, either correct the attribution or use a different quote."
+    ),
+    "cricket": (
+        "Any specific player names, team names, match results, season facts, "
+        "and historical references MUST be verified via search before you use "
+        "them. Roast/opinion/banter content is free — fact-check only the "
+        "concrete factual claims."
+    ),
+    "football": (
+        "Any specific player names, team names, match results, season facts, "
+        "and historical references MUST be verified via search before you use "
+        "them. Commentary/opinion content is free — fact-check only the "
+        "concrete factual claims."
+    ),
+    "golden_lady": (
+        "STRICT MODE — this is an ad. ZERO medical/health-benefit claims "
+        "unless you can verify them against an authoritative health source "
+        "(WHO, NIH, peer-reviewed paper). Verifiable food-tradition or "
+        "process claims (cold-pressed, hand-pounded, sourced from X region) "
+        "are fine if you can find a real source describing the practice."
+    ),
+    "custom": (
+        "Verify every concrete factual claim — numbers, names, dates, events, "
+        "scientific facts — via search before you write it. Opinions, "
+        "hypotheticals, and stylistic flourishes don't need verification."
+    ),
+}
+
+
+def generate_grounded(base_prompt: str, format_name: str) -> dict:
+    """Single Gemini call that does research + write + cite in one shot.
+    Google Search grounding is enabled, so the model can look facts up
+    BEFORE writing the script. The response includes a `sources` field
+    listing every factual claim and where it came from — that's what we
+    save to factcheck.json for the manual-approval reviewer.
+
+    Replaces the older multi-call verify→revise loop. One API call instead
+    of up to 16 per script.
+    """
+    note = _GROUNDED_NOTES.get(format_name, _GROUNDED_NOTES["custom"])
+    wrapped = f"""You have access to Google Search. Use it BEFORE writing — research the
+topic, verify every factual claim against real sources, then write the script
+using ONLY facts you've verified.
+
+FACT-CHECK RULES FOR THIS FORMAT ({format_name}):
+{note}
+
+If you cannot verify a specific number, name, date, or fact within 2-3 search
+queries, REPLACE it with something you can verify (vaguer phrasing, a
+different example) rather than guessing. It is much better to be vague and
+right than specific and wrong.
+
+In addition to the keys requested below, ALSO include in your JSON output a
+"sources" field — a list of objects like:
+  {{ "claim": "<exact phrase from your script>",
+     "source": "<URL of the page that verified this claim>" }}
+One entry per concrete factual claim you made. Opinions and hypotheticals
+don't need a source.
+
+ORIGINAL TASK:
+{base_prompt}
+
+Return ONLY the JSON object, no prose, no markdown fences. Make sure the
+JSON is well-formed and parseable.
+"""
+    return _call(wrapped, grounded=True, label="grounded")
 
 
 def edit(previous: dict, edit_instruction: str, format_hint: str) -> dict:
@@ -91,28 +198,3 @@ Return ONLY the revised JSON, no prose.
     return generate(prompt)
 
 
-def revise_for_facts(previous: dict, issues: list[str], format_hint: str) -> dict:
-    """Regenerate a script after a fact-check turned up problems. Feeds the
-    list of specific factual issues back to Gemini and asks it to rewrite the
-    script so each issue is fixed, while keeping the same JSON shape and tone.
-    Used by the fact-check loop in generators/base.py."""
-    from .style import WRITING_RULES
-    issues_block = "\n".join(f"- {i}" for i in issues) if issues else "- (none)"
-    prompt = f"""{WRITING_RULES}
-
-You previously generated this {format_hint} script as JSON:
-
-{json.dumps(previous, indent=2)}
-
-A fact-check pass against Google Search found these factual problems with
-your script. Rewrite the script so EVERY one of these is fixed. Do not
-introduce new factual claims you cannot verify. When in doubt, write more
-conservatively (vaguer numbers, fewer specific names) rather than guessing.
-
-FACT-CHECK ISSUES TO FIX:
-{issues_block}
-
-Return ONLY the revised JSON in the SAME shape (same keys) as the original,
-no prose, no markdown fences.
-"""
-    return generate(prompt)
