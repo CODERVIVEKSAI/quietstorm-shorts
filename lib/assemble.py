@@ -73,11 +73,12 @@ def assemble(
     else:
         clip_len = final_dur / n
 
-    # Build the per-clip prep filters. `loop=-1:size=99999:start=0` makes the
-    # filter loop frames inside this clip's slot if the source is shorter than
-    # `clip_len` — frame-level looping is invisible to the viewer, unlike
-    # restarting the whole clip from t=0 which is the old behavior we're
-    # killing here.
+    # Build the per-clip prep filters. The `loop` filter loops frames inside
+    # this clip's slot if the source is shorter than `clip_len`. Its `size`
+    # parameter is the frame-buffer size, declared INT16 in ffmpeg's source
+    # (max 32767 — anything larger fails with "Numerical result out of range"
+    # at filter-construction time on every ffmpeg version). 32767 frames is
+    # ~18 min at 30fps, which dwarfs any realistic Pexels clip.
     prep = []
     for i in range(n):
         prep.append(
@@ -86,7 +87,7 @@ def assemble(
             f"crop={W}:{H},"
             f"setsar=1,"
             f"fps={FPS},"
-            f"loop=loop=-1:size=99999:start=0,"
+            f"loop=loop=-1:size=32767:start=0,"
             f"trim=0:{clip_len:.3f},"
             f"setpts=PTS-STARTPTS"
             f"[v{i}]"
