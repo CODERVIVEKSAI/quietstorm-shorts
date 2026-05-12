@@ -9,8 +9,8 @@ display_name: "QuietStorm"
 tagline: "Work hard in silence. Let your success be your noise."
 
 # Default voice used by every format unless a generator overrides it.
-# Adam Multilingual is the newer Edge voice — most natural conversational male.
-default_voice: "en-US-AdamMultilingualNeural"
+# Andrew Multilingual: warm conversational male, confirmed present in edge-tts.
+default_voice: "en-US-AndrewMultilingualNeural"
 
 # Short 9:16 video dimensions (YouTube Shorts requirement)
 video:
@@ -24,10 +24,10 @@ video:
 voices:
   quote: "en-US-AndrewMultilingualNeural"   # warm reflective male, slight gravitas
   what_if: "en-US-BrianMultilingualNeural"  # young energetic male, viral-Shorts feel
-  joke: "en-US-AdamMultilingualNeural"      # NEWER — super natural conversational, lands punchlines
-  golden_lady: "en-IN-AaravNeural"          # NEWER Indian English male, warm
-  cricket: "en-IN-AaravNeural"              # NEWER Indian English — fan-culture voice
-  football: "en-US-AdamMultilingualNeural"  # commentator energy
+  joke: "en-US-BrianMultilingualNeural"     # energetic male — lands punchy delivery
+  golden_lady: "en-IN-PrabhatNeural"        # Indian English male, warm
+  cricket: "en-IN-PrabhatNeural"            # Indian English — fan-culture voice
+  football: "en-US-BrianMultilingualNeural" # commentator energy
 
 # Per-format speech rate. Negative = slower, positive = faster. Format: "+0%", "-7%".
 rates:
@@ -53,12 +53,14 @@ pitches:
 volumes: {}
 
 # === Voice swap reference ===
+# Only voices that exist in the edge-tts catalog will work — anything else
+# raises edge_tts.exceptions.NoAudioReceived at synthesis time.
 # Shorts-style energetic:    en-US-EmmaMultilingualNeural, en-US-AvaMultilingualNeural,
 #                            en-US-AndrewMultilingualNeural, en-US-BrianMultilingualNeural
 # News/serious:              en-US-GuyNeural, en-US-AriaNeural
 # TikTok-Jessie-ish (female):en-US-JennyNeural
-# Indian English (male):     en-IN-AaravNeural (newer, natural), en-IN-PrabhatNeural, en-IN-RehaanNeural, en-IN-KunalNeural
-# Indian English (female):   en-IN-AnanyaNeural (newer, natural), en-IN-NeerjaNeural, en-IN-KavyaNeural
+# Indian English (male):     en-IN-PrabhatNeural
+# Indian English (female):   en-IN-NeerjaNeural, en-IN-NeerjaExpressiveNeural
 # British:                   en-GB-RyanNeural, en-GB-SoniaNeural
 # Browse all: python -c "import asyncio,edge_tts; print('\n'.join(v['ShortName'] for v in asyncio.run(edge_tts.list_voices()) if v['Locale'].startswith('en-')))"
 
