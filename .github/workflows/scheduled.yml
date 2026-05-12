@@ -92,8 +92,7 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-      - name: Install ffmpeg
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      # ffmpeg is pre-installed on ubuntu-latest runner images.
       - name: Install Python deps
         run: pip install -r requirements.txt
 
