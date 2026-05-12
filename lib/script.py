@@ -1,8 +1,11 @@
 """Gemini-backed script generation. Returns structured JSON per format.
 
-Tries gemini-2.5-flash-lite first (large free quota, ~1500 RPD, 15 RPM), falls
-back to gemini-2.5-flash. Retries with backoff on rate-limit errors so parallel
-matrix jobs don't all fail when they hit the 15 RPM cap simultaneously.
+Uses the google-genai SDK (not the legacy google-generativeai package),
+because only google-genai exposes the `google_search` tool that Gemini 2.x
+models require for grounding. Tries gemini-2.5-flash-lite first (cheap,
+fast), falls back to gemini-2.5-flash. Retries with backoff on rate-limit
+errors so parallel matrix jobs don't all fail when they hit the per-minute
+cap at the same time.
 """
 
 import json
@@ -10,22 +13,24 @@ import os
 import re
 import time
 import random
-import google.generativeai as genai
-from google.api_core import exceptions as gax
+
+from google import genai
+from google.genai import types as genai_types
+from google.genai import errors as genai_errors
 
 _MODEL_CANDIDATES = ["gemini-2.5-flash-lite", "gemini-2.5-flash"]
 
-_configured = False
+_client = None
 
 
-def _configure():
-    global _configured
-    if not _configured:
+def _get_client() -> genai.Client:
+    global _client
+    if _client is None:
         key = os.environ.get("GEMINI_API_KEY")
         if not key:
             raise RuntimeError("GEMINI_API_KEY not set")
-        genai.configure(api_key=key)
-        _configured = True
+        _client = genai.Client(api_key=key)
+    return _client
 
 
 def _extract_json(text: str) -> dict:
@@ -48,103 +53,55 @@ def _retry_delay_from(err: Exception) -> float:
     return 30.0
 
 
-def _build_grounded_model(model_name: str):
-    """Build a Gemini model with Google Search grounding enabled. Tries the
-    Gemini 2.x `google_search` tool first (via several SDK paths because the
-    0.8.x google-generativeai SDK exposes it inconsistently), then falls back
-    to the 1.5-era `google_search_retrieval` string shortcut. Returns None if
-    no grounding option is available — caller falls back to plain generation."""
-    # Path A — gapic library directly (most reliable in 0.8.x)
-    try:
-        import google.ai.generativelanguage_v1beta as glm  # type: ignore
-        if hasattr(glm, "GoogleSearch") and hasattr(glm, "Tool"):
-            tool = glm.Tool(google_search=glm.GoogleSearch())
-            return genai.GenerativeModel(model_name, tools=[tool])
-    except Exception as e:
-        print(f"[grounded] glm google_search failed: {e}")
-
-    # Path B — genai.protos
-    try:
-        from google.generativeai import protos  # type: ignore
-        if hasattr(protos, "GoogleSearch"):
-            tool = protos.Tool(google_search=protos.GoogleSearch())
-            return genai.GenerativeModel(model_name, tools=[tool])
-    except Exception as e:
-        print(f"[grounded] protos google_search failed: {e}")
-
-    # Path C — dict form
-    try:
-        return genai.GenerativeModel(model_name, tools=[{"google_search": {}}])
-    except Exception as e:
-        print(f"[grounded] dict google_search failed: {e}")
-
-    # Path D — old 1.5 tool (works only for 1.5 models; 2.x will reject at request time)
-    try:
-        return genai.GenerativeModel(model_name, tools="google_search_retrieval")
-    except Exception as e:
-        print(f"[grounded] google_search_retrieval string failed: {e}")
-
-    print("[grounded] no grounding tool available; falling back to non-grounded generation")
+def _status_code(err: Exception) -> int | None:
+    """Pull the HTTP-ish status out of a genai APIError, if present."""
+    for attr in ("code", "status_code", "status"):
+        v = getattr(err, attr, None)
+        if isinstance(v, int):
+            return v
     return None
 
 
-def _is_grounding_unsupported_error(err: Exception) -> bool:
-    msg = str(err).lower()
-    return (
-        "google_search" in msg
-        or "tool" in msg and "not supported" in msg
-    )
-
-
 def _call(prompt: str, *, grounded: bool, label: str) -> dict:
-    """Single Gemini call with retry + model fallback. `grounded=True` asks
-    the SDK to enable Google Search grounding; if the API rejects the
-    grounding tool at request time, we retry the SAME prompt without
-    grounding rather than failing the whole script job."""
-    _configure()
-    last_err = None
+    """Single Gemini call with retry + model fallback. `grounded=True` enables
+    the Google Search tool so the model can look facts up before answering."""
+    client = _get_client()
+    last_err: Exception | None = None
     for model_name in _MODEL_CANDIDATES:
         for attempt in range(2):
-            grounded_attempt = grounded
             try:
-                if grounded_attempt:
-                    model = _build_grounded_model(model_name)
-                    if model is None:
-                        grounded_attempt = False
-                        model = genai.GenerativeModel(model_name)
-                else:
-                    model = genai.GenerativeModel(model_name)
-                resp = model.generate_content(prompt)
+                config = None
+                if grounded:
+                    config = genai_types.GenerateContentConfig(
+                        tools=[
+                            genai_types.Tool(google_search=genai_types.GoogleSearch())
+                        ]
+                    )
+                resp = client.models.generate_content(
+                    model=model_name,
+                    contents=prompt,
+                    config=config,
+                )
                 return _extract_json(resp.text)
-            except gax.InvalidArgument as e:
-                # Most common case: API rejected the grounding tool for this
-                # model. Recover by retrying the same call non-grounded.
-                if grounded_attempt and _is_grounding_unsupported_error(e):
-                    print(f"[{label}] {model_name} rejected grounding tool ({e}); "
-                          "retrying non-grounded on same model")
-                    try:
-                        model = genai.GenerativeModel(model_name)
-                        resp = model.generate_content(prompt)
-                        return _extract_json(resp.text)
-                    except Exception as inner:
-                        last_err = inner
-                        # fall through to next attempt / next model
-                else:
+            except genai_errors.ClientError as e:
+                code = _status_code(e)
+                if code == 429:
+                    wait = min(45.0, _retry_delay_from(e) + random.uniform(0, 5))
+                    print(f"[{label}] {model_name} rate-limited; waiting {wait:.0f}s "
+                          f"(attempt {attempt + 1}/2)…")
                     last_err = e
-                    print(f"[{label}] {model_name} invalid argument ({e}); trying next model…")
-                    break
-            except gax.ResourceExhausted as e:
+                    time.sleep(wait)
+                    continue
                 last_err = e
-                wait = min(45.0, _retry_delay_from(e) + random.uniform(0, 5))
-                print(f"[{label}] {model_name} rate-limited; waiting {wait:.0f}s "
-                      f"(attempt {attempt + 1}/2)…")
-                time.sleep(wait)
-                continue
-            except (gax.NotFound, gax.PermissionDenied) as e:
-                print(f"[{label}] {model_name} unusable ({type(e).__name__}); "
+                print(f"[{label}] {model_name} client error ({code}): {e}; "
                       "trying next model…")
-                last_err = e
                 break
+            except genai_errors.ServerError as e:
+                last_err = e
+                print(f"[{label}] {model_name} server error; retrying in 5s "
+                      f"(attempt {attempt + 1}/2)…")
+                time.sleep(5)
+                continue
             except (ValueError, json.JSONDecodeError) as e:
                 last_err = e
                 print(f"[{label}] {model_name} returned malformed JSON; retrying…")
@@ -211,9 +168,6 @@ def generate_grounded(base_prompt: str, format_name: str) -> dict:
     BEFORE writing the script. The response includes a `sources` field
     listing every factual claim and where it came from — that's what we
     save to factcheck.json for the manual-approval reviewer.
-
-    Replaces the older multi-call verify→revise loop. One API call instead
-    of up to 16 per script.
     """
     note = _GROUNDED_NOTES.get(format_name, _GROUNDED_NOTES["custom"])
     wrapped = f"""You have access to Google Search. Use it BEFORE writing — research the
@@ -261,5 +215,3 @@ EDIT INSTRUCTION: {edit_instruction}
 Return ONLY the revised JSON, no prose.
 """
     return generate(prompt)
-
-
