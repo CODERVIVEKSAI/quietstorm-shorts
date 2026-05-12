@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
-# Wait for a reviewer to act on the gated `video` job, then auto-approve any
-# still-pending deployment for this run. Designed to run in parallel with the
-# gated video job: if the reviewer approves/rejects/edit-comments within the
-# window, the deployment is no longer pending by the time this wakes up and
-# we exit cleanly. If they don't act, we approve and the video builds.
+# Poll for the gated `video` deployment until the reviewer acts. Exit as soon
+# as the deployment leaves the pending state (approve/reject/edit-comment),
+# or auto-approve once $WAIT_SECONDS has elapsed without any action. Runs in
+# parallel with the gated video job.
 #
 # PAT setup (one-time — required because GitHub's default GITHUB_TOKEN cannot
 # approve its own workflow's deployments):
@@ -19,7 +18,8 @@
 
 set -euo pipefail
 
-WAIT_SECONDS="${WAIT_SECONDS:-1800}"   # 30 min default
+WAIT_SECONDS="${WAIT_SECONDS:-1800}"       # 30 min total budget
+POLL_INTERVAL="${POLL_INTERVAL:-30}"       # check every 30s
 REPO="${GITHUB_REPOSITORY:?GITHUB_REPOSITORY not set}"
 RUN_ID="${GITHUB_RUN_ID:?GITHUB_RUN_ID not set}"
 
@@ -29,25 +29,33 @@ if [ -z "${GH_TOKEN:-}" ]; then
   exit 0
 fi
 
-echo "Waiting ${WAIT_SECONDS}s for reviewer to approve / reject / edit..."
-sleep "$WAIT_SECONDS"
-
-# Each pending deployment exposes its target environment. Approving by
-# environment_id approves every pending deployment in this run that targets
-# that environment (covers matrix workflows where N jobs share one env).
-pending=$(gh api "repos/$REPO/actions/runs/$RUN_ID/pending_deployments" \
-  --jq '[.[].environment.id] | unique')
-
-if [ -z "$pending" ] || [ "$pending" = "[]" ]; then
-  echo "No pending deployments — reviewer already acted. Done."
-  exit 0
-fi
-
-echo "Auto-approving environment IDs: $pending"
-for env_id in $(echo "$pending" | jq -r '.[]'); do
+list_pending() {
   gh api "repos/$REPO/actions/runs/$RUN_ID/pending_deployments" \
-    -X POST \
-    -f "environment_ids[]=$env_id" \
-    -f "state=approved" \
-    -f "comment=Auto-approved after ${WAIT_SECONDS}s reviewer timeout."
+    --jq '[.[].environment.id] | unique'
+}
+
+deadline=$(( $(date +%s) + WAIT_SECONDS ))
+pending="$(list_pending)"
+
+while [ -n "$pending" ] && [ "$pending" != "[]" ]; do
+  now=$(date +%s)
+  remaining=$(( deadline - now ))
+  if [ "$remaining" -le 0 ]; then
+    echo "Timeout reached. Auto-approving environment IDs: $pending"
+    for env_id in $(echo "$pending" | jq -r '.[]'); do
+      gh api "repos/$REPO/actions/runs/$RUN_ID/pending_deployments" \
+        -X POST \
+        -f "environment_ids[]=$env_id" \
+        -f "state=approved" \
+        -f "comment=Auto-approved after ${WAIT_SECONDS}s reviewer timeout."
+    done
+    exit 0
+  fi
+  sleep_for=$POLL_INTERVAL
+  if [ "$remaining" -lt "$sleep_for" ]; then sleep_for=$remaining; fi
+  echo "Still pending; next check in ${sleep_for}s (timeout in ${remaining}s)..."
+  sleep "$sleep_for"
+  pending="$(list_pending)"
 done
+
+echo "Reviewer acted — deployment is no longer pending. Exiting cleanly."
