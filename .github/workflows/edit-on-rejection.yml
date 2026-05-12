@@ -1,0 +1,50 @@
+name: Edit on Rejection
+
+# When a reviewer rejects a `manual-approval` deployment with a comment like
+#   edit <format>: <instruction>
+# auto-dispatch the Edit Video workflow with that format + instruction, using
+# the rejected run as the source script. This lets the reviewer iterate on the
+# script between phase-1 generation and phase-2 video build without leaving
+# GitHub's approval UI.
+
+on:
+  deployment_status:
+
+permissions:
+  contents: read
+  actions: write   # to dispatch edit.yml
+
+jobs:
+  maybe-dispatch:
+    # Only react to manual-approval rejections whose comment starts with "edit".
+    # Random workflow failures or plain rejects-without-comment are ignored.
+    if: >-
+      github.event.deployment_status.state == 'failure' &&
+      github.event.deployment.environment == 'manual-approval' &&
+      startsWith(github.event.deployment_status.description, 'edit')
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      COMMENT: ${{ github.event.deployment_status.description }}
+      SOURCE_RUN: ${{ github.event.workflow_run.id }}
+      REPO: ${{ github.repository }}
+    steps:
+      - name: Parse comment and dispatch Edit Video
+        run: |
+          # Expected syntax: "edit <format>: <instruction>"
+          # <format> is one of edit.yml's choices (quote, what_if, joke,
+          # golden_lady, football, cricket, custom).
+          if [[ ! "$COMMENT" =~ ^edit[[:space:]]+([a-zA-Z_]+)[[:space:]]*:[[:space:]]*(.+)$ ]]; then
+            echo "Reject comment doesn't match 'edit <format>: <instruction>' — ignoring."
+            echo "Got: $COMMENT"
+            exit 0
+          fi
+          FORMAT="${BASH_REMATCH[1]}"
+          INSTRUCTION="${BASH_REMATCH[2]}"
+          echo "Dispatching Edit Video: format=$FORMAT source_run=$SOURCE_RUN"
+          echo "Instruction: $INSTRUCTION"
+          gh workflow run edit.yml \
+            --repo "$REPO" \
+            -f format="$FORMAT" \
+            -f edit_prompt="$INSTRUCTION" \
+            -f source_artifact_run="$SOURCE_RUN"

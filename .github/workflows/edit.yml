@@ -46,10 +46,18 @@ jobs:
         if: ${{ github.event.inputs.source_artifact_run != '' }}
         run: |
           mkdir -p prev
+          # Try video-* first (approved+built source runs), then script-*
+          # (source runs that were rejected at the approval gate so video was
+          # never built — this is the edit-on-rejection path). Whichever exists
+          # gives us script.json.
           gh run download "$INPUT_SOURCE_RUN" \
             --repo "${{ github.repository }}" \
             --dir prev \
-            --pattern "video-${INPUT_FORMAT}-*" || echo "no matching artifact"
+            --pattern "video-${INPUT_FORMAT}-*" || echo "no video artifact"
+          gh run download "$INPUT_SOURCE_RUN" \
+            --repo "${{ github.repository }}" \
+            --dir prev \
+            --pattern "script-${INPUT_FORMAT}-*" || echo "no script artifact"
           PREV_SCRIPT=$(find prev -name script.json | head -n 1)
           if [ -n "$PREV_SCRIPT" ]; then
             cp "$PREV_SCRIPT" previous_script.json
@@ -69,13 +77,29 @@ jobs:
           fi
           python -m "generators.${INPUT_FORMAT}" "${ARGS[@]}"
 
+      - name: Render script summary for reviewer
+        run: python scripts/script_summary.py "output/${{ steps.runid.outputs.run_id }}/${INPUT_FORMAT}"
+
       - uses: actions/upload-artifact@v4
         with:
           name: script-${{ github.event.inputs.format }}-${{ steps.runid.outputs.run_id }}
           path: output/${{ steps.runid.outputs.run_id }}/${{ github.event.inputs.format }}/
           retention-days: 7
 
-  # Phase 2 — TTS + visuals + assemble, gated on manual approval.
+  # Auto-approve any still-pending deployment after 30 min of no reviewer
+  # action. Requires AUTO_APPROVE_PAT secret (see auto_approve_after_wait.sh).
+  auto-approve:
+    needs: script
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.AUTO_APPROVE_PAT }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Wait 30 min then auto-approve if reviewer hasn't acted
+        run: bash scripts/auto_approve_after_wait.sh
+
+  # Phase 2 — TTS + visuals + assemble, gated on manual approval (with
+  # 30-min auto-approve fallback above).
   video:
     needs: script
     runs-on: ubuntu-latest

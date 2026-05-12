@@ -44,6 +44,9 @@ jobs:
       - name: Generate ${{ matrix.format }} script
         run: python -m generators.${{ matrix.format }} --run-id "${{ steps.runid.outputs.run_id }}" --stage script
 
+      - name: Render script summary for reviewer
+        run: python scripts/script_summary.py "output/${{ steps.runid.outputs.run_id }}/${{ matrix.format }}"
+
       - name: Upload script artifact for review
         uses: actions/upload-artifact@v4
         with:
@@ -51,9 +54,25 @@ jobs:
           path: output/${{ steps.runid.outputs.run_id }}/${{ matrix.format }}/
           retention-days: 7
 
+  # Auto-approve any still-pending deployment after 30 min of no reviewer
+  # action. Runs in parallel with the gated `video` job. Requires
+  # AUTO_APPROVE_PAT secret (see scripts/auto_approve_after_wait.sh).
+  auto-approve:
+    needs: script
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.AUTO_APPROVE_PAT }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Wait 30 min then auto-approve if reviewer hasn't acted
+        run: bash scripts/auto_approve_after_wait.sh
+
   # Phase 2 — TTS + visuals + assemble. Gated by the `manual-approval`
   # environment: GitHub will pause here and ask the configured reviewer to
-  # approve before any audio/video is generated. Reject to abort.
+  # approve before any audio/video is generated. Reject to abort, or reject
+  # with `edit <format>: <instruction>` to regenerate the script (see
+  # edit-on-rejection.yml). After 30 min of no action the auto-approve job
+  # approves automatically.
   video:
     needs: script
     runs-on: ubuntu-latest
