@@ -23,15 +23,30 @@ humor, not commentator energy.
 TODAY IS {today.isoformat()}. Use Google Search to find the SINGLE most
 talked-about football match that finished between {window_start.isoformat()}
 and {today.isoformat()} — ideally yesterday ({yesterday.isoformat()}).
-"Most talked-about" priority order:
+
+GLOBAL-FANBASE PRIORITY (this is a Shorts channel, audience follows the
+biggest clubs):
+  TIER S — pick any match involving these clubs over anything else:
+    Real Madrid, FC Barcelona, Manchester United.
+  TIER A — strongly prefer these clubs next:
+    PSG, Juventus, Manchester City, Chelsea, Liverpool,
+    Bayern Munich, Arsenal.
+  TIER B — only if no Tier S/A match happened in the window:
+    other top-five-league clubs.
+
+Within each tier, apply this competition priority:
   1. UEFA Champions League / Europa League knockout match.
-  2. A Premier League / La Liga / Serie A / Bundesliga / Ligue 1 match
-     involving a top-6 club, especially a derby (NLD, Manchester derby,
-     El Clásico, Madrid derby, Milan derby) or top-of-the-table clash.
+  2. A domestic league match — especially a derby (El Clásico, Madrid derby,
+     NLD, Manchester derby, Milan derby) or top-of-the-table clash.
   3. A national-team match in a major tournament (Euros, World Cup, AFCON,
      Copa América, Asian Cup) if one is currently running.
-  4. A massive upset or 5+ goal blowout in any top-five league.
-  5. As a last resort: yesterday's biggest fixture in any top-tier league.
+  4. A massive upset or 5+ goal blowout.
+  5. Last resort: the biggest fixture of the window in any top-tier league.
+
+If a Tier-S club played AND a more "dramatic" Tier-A match also happened,
+still pick the Tier-S match — global fanbase > drama. Only break this rule
+if the Tier-A match was a major final/derby and the Tier-S match was a
+routine win.
 
 Verify before writing:
 - The two teams, the competition, and the exact match date.
