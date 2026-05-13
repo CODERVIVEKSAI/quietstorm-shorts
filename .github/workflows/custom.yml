@@ -105,7 +105,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.11", cache: pip }
-      # ffmpeg is pre-installed on ubuntu-latest runner images.
+      # ubuntu-24.04 doesn't ship ffmpeg/ffprobe; install without apt-update
+      # (the cached package index already has ffmpeg, and apt-update on these
+      # runners has occasionally taken 20+ min on slow mirrors).
+      - run: sudo apt-get install -y ffmpeg
       - run: pip install -r requirements.txt
       - name: Download approved script
         uses: actions/download-artifact@v4

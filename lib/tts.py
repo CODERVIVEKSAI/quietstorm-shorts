@@ -8,6 +8,14 @@ distributes timing proportional to character count.
 Also sanitizes scripts before synthesis: TTS engines spell out non-word
 interjections (ARRRGGHHH, OOOMG, AAAAH) letter-by-letter, so we substitute
 them with proper words the engine actually voices.
+
+Note on inline SSML: edge-tts 7.x XML-escapes the input before wrapping it
+in <speak>/<voice>/<prosody>, so any <prosody>/<break> tags we tried to
+inject got escaped and spoken literally (the user heard "minus seven percent
+pitch plus eight percent"). We pass plain text and let edge-tts handle
+top-level prosody via rate/pitch/volume args. Per-phrase emphasis isn't
+achievable through this library; the `emphasis_phrases` arg is accepted but
+ignored, kept so callers don't break.
 """
 
 import asyncio
@@ -46,53 +54,6 @@ def sanitize_for_tts(text: str) -> str:
     for pattern, repl in _INTERJECTION_PATTERNS:
         text = pattern.sub(repl, text)
     text = _TRIPLE_LETTERS.sub(r"\1\1", text)
-    return text
-
-
-def _xml_escape(s: str) -> str:
-    """Escape the three XML special chars so we can splice them into SSML
-    without breaking the parser. Order matters — escape `&` first or you'll
-    double-escape the entity refs you just produced."""
-    return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-
-
-def _add_ssml(plain: str, emphasis_phrases: list[str] | None) -> str:
-    """Turn plain script text into TTS-ready inline SSML so the voice
-    actually breathes and stresses the right lines:
-
-      - `...` (three+ dots) → 400ms <break> (real pause, not just a beat)
-      - `—`  (em-dash)      → 250ms <break>
-      - each phrase in `emphasis_phrases` gets wrapped in <prosody> that
-        slows it down a touch and raises pitch slightly — the voice
-        delivers it like a punch line instead of skimming through.
-
-    edge-tts wraps whatever we hand it in its own <speak><voice> envelope,
-    so we only emit the inline tags here, not a full SSML document.
-    """
-    text = _xml_escape(plain)
-
-    # Wrap emphasis phrases BEFORE break injection so phrases that contain
-    # an ellipsis or em-dash also pick up the break inside their prosody.
-    if emphasis_phrases:
-        for raw_phrase in emphasis_phrases:
-            phrase = (raw_phrase or "").strip()
-            if not phrase:
-                continue
-            escaped = _xml_escape(phrase)
-            pattern = re.compile(re.escape(escaped), re.IGNORECASE)
-            # Only the FIRST occurrence — wrapping every match would make the
-            # whole script feel slow and theatrical.
-            text = pattern.sub(
-                lambda m: f'<prosody rate="-7%" pitch="+8%">{m.group(0)}</prosody>',
-                text,
-                count=1,
-            )
-
-    # Break injection. Run AFTER prosody so breaks inside an emphasized
-    # phrase still get the bigger pause.
-    text = re.sub(r"\.{3,}", '<break time="400ms"/>', text)
-    text = text.replace("—", '<break time="250ms"/>')
-
     return text
 
 
@@ -150,7 +111,7 @@ def synthesize(
     rate: str = "+0%",
     pitch: str = "+0Hz",
     volume: str = "+0%",
-    emphasis_phrases: list[str] | None = None,
+    emphasis_phrases: list[str] | None = None,   # accepted, ignored — see module docstring
 ):
     """Synthesize voiceover MP3 + write a time-proportional SRT caption file.
 
@@ -158,19 +119,14 @@ def synthesize(
       rate    — edge-tts speech rate, e.g. "+0%", "-7%", "+12%"
       pitch   — edge-tts pitch offset in Hz, e.g. "+5Hz", "-3Hz"
       volume  — edge-tts volume offset, e.g. "+10%"
-      emphasis_phrases — short verbatim phrases from `text` that should be
-                punched in delivery (slowed + pitched up via SSML <prosody>).
-                Only the first occurrence of each is wrapped.
 
-    Captions are built from the SANITIZED PLAIN text (no SSML) so what's
-    burned into the video matches what the viewer hears, character-for-
-    character.
+    Captions are built from the sanitized text so what's burned into the
+    video matches what the viewer hears, character-for-character.
     """
     audio_path.parent.mkdir(parents=True, exist_ok=True)
     plain = sanitize_for_tts(text)
-    ssml_text = _add_ssml(plain, emphasis_phrases)
     asyncio.run(_synthesize_audio(
-        ssml_text, voice, audio_path,
+        plain, voice, audio_path,
         rate=rate, pitch=pitch, volume=volume,
     ))
     duration = _audio_duration(audio_path)

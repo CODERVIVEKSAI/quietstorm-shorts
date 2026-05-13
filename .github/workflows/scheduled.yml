@@ -92,7 +92,9 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-      # ffmpeg is pre-installed on ubuntu-latest runner images.
+      # ubuntu-24.04 doesn't ship ffmpeg/ffprobe; install without apt-update.
+      - name: Install ffmpeg
+        run: sudo apt-get install -y ffmpeg
       - name: Install Python deps
         run: pip install -r requirements.txt
 
