@@ -62,9 +62,35 @@ def _status_code(err: Exception) -> int | None:
     return None
 
 
+def _grounding_sources(resp) -> list[dict]:
+    """Pull real URLs out of the response's grounding_metadata. These are
+    the search-result chunks Gemini was actually shown — unlike URLs the
+    model writes into the JSON body, which it tends to hallucinate (e.g.
+    invented goodreads.com/quotes/<id> pages that 404)."""
+    out: list[dict] = []
+    seen: set[str] = set()
+    for cand in getattr(resp, "candidates", None) or []:
+        gm = getattr(cand, "grounding_metadata", None)
+        if not gm:
+            continue
+        for chunk in getattr(gm, "grounding_chunks", None) or []:
+            web = getattr(chunk, "web", None)
+            if not web:
+                continue
+            uri = getattr(web, "uri", None)
+            if not uri or uri in seen:
+                continue
+            seen.add(uri)
+            title = (getattr(web, "title", None) or "").strip()
+            out.append({"claim": title, "source": uri})
+    return out
+
+
 def _call(prompt: str, *, grounded: bool, label: str) -> dict:
     """Single Gemini call with retry + model fallback. `grounded=True` enables
-    the Google Search tool so the model can look facts up before answering."""
+    the Google Search tool so the model can look facts up before answering.
+    When grounded, the response's grounding_metadata overrides any `sources`
+    field the model wrote — model-written URLs hallucinate constantly."""
     client = _get_client()
     last_err: Exception | None = None
     for model_name in _MODEL_CANDIDATES:
@@ -82,7 +108,12 @@ def _call(prompt: str, *, grounded: bool, label: str) -> dict:
                     contents=prompt,
                     config=config,
                 )
-                return _extract_json(resp.text)
+                parsed = _extract_json(resp.text)
+                if grounded:
+                    real = _grounding_sources(resp)
+                    if real:
+                        parsed["sources"] = real
+                return parsed
             except genai_errors.ClientError as e:
                 code = _status_code(e)
                 if code == 429:
