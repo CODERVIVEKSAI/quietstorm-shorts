@@ -43,9 +43,11 @@ while [ -n "$pending" ] && [ "$pending" != "[]" ]; do
   if [ "$remaining" -le 0 ]; then
     echo "Timeout reached. Auto-approving environment IDs: $pending"
     for env_id in $(echo "$pending" | jq -r '.[]'); do
+      # -F (capital) sends typed values — environment_ids[] must be integers.
+      # -f (lowercase) keeps strings for state/comment.
       gh api "repos/$REPO/actions/runs/$RUN_ID/pending_deployments" \
         -X POST \
-        -f "environment_ids[]=$env_id" \
+        -F "environment_ids[]=$env_id" \
         -f "state=approved" \
         -f "comment=Auto-approved after ${WAIT_SECONDS}s reviewer timeout."
     done
