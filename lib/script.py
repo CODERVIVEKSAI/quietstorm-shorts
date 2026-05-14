@@ -38,15 +38,75 @@ def _get_client() -> genai.Client:
 
 
 def _extract_json(text: str) -> dict:
+    """Find a JSON object inside the model's reply.
+
+    Gemini sometimes returns multiple ```json fenced blocks (one for the main
+    script, one for the match_info, sometimes a 'reasoning' block). The old
+    regex-based approach grabbed the first balanced `{...}` it saw, which was
+    often the SMALLER match_info object — that's how the saved script.json
+    ended up with just home_team/away_team/scores and no narration.
+
+    Strategy: scan for every balanced `{...}` substring (depth-aware,
+    string-aware), parse each one, and prefer the candidate that actually
+    contains a "script" field. Falls back to the candidate with the most
+    keys if none has "script".
+    """
     text = text.strip()
-    fence = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
-    if fence:
-        text = fence.group(1)
-    start = text.find("{")
-    end = text.rfind("}")
-    if start == -1 or end == -1:
-        raise ValueError(f"No JSON object found in model output: {text[:200]}")
-    return json.loads(text[start : end + 1])
+
+    # Fast path: whole reply is valid JSON.
+    try:
+        parsed = json.loads(text)
+        if isinstance(parsed, dict):
+            return parsed
+    except json.JSONDecodeError:
+        pass
+
+    candidates: list[dict] = []
+    i = 0
+    while i < len(text):
+        if text[i] != "{":
+            i += 1
+            continue
+        depth = 0
+        in_string = False
+        escape = False
+        for j in range(i, len(text)):
+            c = text[j]
+            if escape:
+                escape = False
+                continue
+            if c == "\\" and in_string:
+                escape = True
+                continue
+            if c == '"':
+                in_string = not in_string
+                continue
+            if in_string:
+                continue
+            if c == "{":
+                depth += 1
+            elif c == "}":
+                depth -= 1
+                if depth == 0:
+                    try:
+                        obj = json.loads(text[i : j + 1])
+                        if isinstance(obj, dict):
+                            candidates.append(obj)
+                    except json.JSONDecodeError:
+                        pass
+                    break
+        i = max(i + 1, j + 1) if depth == 0 else i + 1
+
+    if not candidates:
+        raise ValueError(f"No JSON object found in model output: {text[:300]}")
+
+    # Prefer the candidate that has the narration — that's the "real" payload.
+    with_script = [c for c in candidates if "script" in c]
+    if with_script:
+        return with_script[0]
+    # Otherwise pick the biggest by key count, breaking ties by serialized length.
+    candidates.sort(key=lambda d: (len(d), len(json.dumps(d, default=str))), reverse=True)
+    return candidates[0]
 
 
 def _retry_delay_from(err: Exception) -> float:

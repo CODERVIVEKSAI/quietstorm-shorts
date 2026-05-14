@@ -95,6 +95,18 @@ def build(format_name: str, prompt: str, run_id: str, edit_instruction: str | No
             )
         spec = json.loads(script_path.read_text())
 
+    # The pipeline can't proceed without narration text. If the script generator
+    # produced a JSON object missing "script" (e.g. JSON-extraction grabbed the
+    # match_info block instead of the full payload), fail loudly here rather
+    # than crashing with a bare KeyError four lines below.
+    if not isinstance(spec, dict) or not spec.get("script"):
+        raise RuntimeError(
+            f"script.json at {script_path} is missing the 'script' field. "
+            f"Got keys: {list(spec.keys()) if isinstance(spec, dict) else type(spec).__name__}. "
+            "Regenerate the script (most likely the model returned multiple JSON "
+            "blocks and the extractor picked the wrong one)."
+        )
+
     # 2. TTS (voiceover + SRT). Pitch/volume/emphasis are what make the
     # voice feel like a person performing rather than a TTS box reading.
     audio_path = out_dir / "voice.mp3"
