@@ -71,6 +71,15 @@ Return JSON:
 - title: under 60 chars, lowercase, screenshot-y
   (e.g. "dc fans, we need to talk", "csk just ended their entire season")
 - premise: one-line match summary (e.g. "DC 264/2 lost to PBKS 265/4 on 2026-05-10")
+- match_info: structured fields for the scoreboard graphic the video opens with:
+    home_team:   string, team name as fans say it (e.g. "DC", "India", "MI")
+    away_team:   string
+    home_score:  string with full cricket notation when relevant
+                 (e.g. "264/2 (19 ov)" or just "264/2" — keep it short)
+    away_score:  string, same format
+    competition: short string, max ~30 chars (e.g. "IPL 2026 Eliminator",
+                 "T20I Series", "ICC Champions Trophy")
+    match_date:  ISO date string (e.g. "2026-05-10")
 - hashtags: 6-8 with # — include #cricket #shorts + team tags + #cricketmemes
 - visual_queries: 3-6 generic cricket Pexels queries that follow the script's beats
   (e.g. ["cricket stadium night", "cricket bat batsman", "stadium crowd cheering",

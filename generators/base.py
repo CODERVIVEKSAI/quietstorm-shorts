@@ -3,7 +3,7 @@
 import json
 from pathlib import Path
 from lib import script as script_lib
-from lib import tts, visuals, assemble
+from lib import tts, visuals, assemble, scoreboard
 from lib.config import load_channel, voice_for, rate_for, pitch_for, volume_for, OUTPUT_DIR
 from lib.preferences import preferences_block
 from lib.style import WRITING_RULES
@@ -130,6 +130,22 @@ def build(format_name: str, prompt: str, run_id: str, edit_instruction: str | No
     clips = visuals.fetch_videos_multi(queries, clips_dir)
     if not clips:
         raise RuntimeError(f"No Pexels videos found for any of: {queries!r}")
+
+    # 3b. Sports scoreboard intro. When the script spec has a `match_info`
+    # block, render a 2.8s scoreboard MP4 and prepend it to the clip list so
+    # the video opens with the actual teams + final score. Doing this in
+    # base.py (not the sports generators) keeps the visual rule centralized
+    # and gives an obvious "if missing, skip" fallback so other formats stay
+    # unaffected.
+    match_info = spec.get("match_info") if isinstance(spec.get("match_info"), dict) else None
+    if match_info:
+        try:
+            scoreboard_path = clips_dir / "clip_00_scoreboard.mp4"
+            scoreboard.render(match_info, scoreboard_path)
+            clips = [scoreboard_path] + clips
+            print(f"[scoreboard] prepended {scoreboard_path.name}")
+        except Exception as e:
+            print(f"[scoreboard] skipping (won't fail the build): {e}")
 
     # 4. Assemble — transition style depends on format mood.
     video_path = out_dir / "video.mp4"

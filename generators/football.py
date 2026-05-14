@@ -88,6 +88,13 @@ Return JSON:
 - title: under 60 chars, lowercase okay
   (e.g. "arsenal fans, log off", "city just ended the title race")
 - premise: one-line match summary (e.g. "Liverpool 4-1 over Spurs at Anfield, 2026-05-10")
+- match_info: structured fields for the scoreboard graphic the video opens with:
+    home_team:   string, team name as fans would say it (e.g. "Real Madrid")
+    away_team:   string
+    home_score:  string, just the goals scored (e.g. "4")
+    away_score:  string
+    competition: short string, max ~30 chars (e.g. "UCL Semi-Final" or "Premier League")
+    match_date:  ISO date string (e.g. "2026-05-10")
 - hashtags: 6-8 with # — include #football #shorts + league tag + team tags + #footballmemes
 - visual_queries: 3-6 generic football Pexels queries that follow the script's beats
   (e.g. ["football stadium night", "soccer ball net", "stadium crowd cheering",

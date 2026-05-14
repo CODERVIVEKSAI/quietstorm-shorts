@@ -37,6 +37,7 @@ def render(out_dir: Path) -> str:
     narration = (spec.get("script") or "").strip() or "_(empty script)_"
     quote = (spec.get("quote") or "").strip()
     premise = (spec.get("premise") or "").strip()
+    match_info = spec.get("match_info") if isinstance(spec.get("match_info"), dict) else None
     emphasis = spec.get("emphasis_phrases") or []
     queries = spec.get("visual_queries") or []
     if not queries and spec.get("visual_query"):
@@ -67,6 +68,20 @@ def render(out_dir: Path) -> str:
         lines.append(f"\n### Quote\n> {quote}")
     if premise:
         lines.append(f"\n### Premise\n{premise}")
+
+    if match_info:
+        lines.append("\n### Scoreboard intro (renders as the first 2.8s of the video)")
+        ht = (match_info.get("home_team") or "").strip()
+        at = (match_info.get("away_team") or "").strip()
+        hs = str(match_info.get("home_score") or "").strip()
+        as_ = str(match_info.get("away_score") or "").strip()
+        comp = (match_info.get("competition") or "").strip()
+        mdate = (match_info.get("match_date") or "").strip()
+        if comp:
+            lines.append(f"- **Competition:** {comp}")
+        lines.append(f"- **Match:** {ht}  **{hs} — {as_}**  {at}")
+        if mdate:
+            lines.append(f"- **Date:** {mdate}")
 
     lines.append("\n### Narration / on-screen captions")
     lines.append("")
