@@ -38,10 +38,16 @@ Verify before writing:
 - The result (won by X runs / wickets, super over, no-result, etc.).
 - Star performances worth mentioning (only specific stats you can verify).
 
-If you genuinely cannot find a cricket match in this window, fall back to the
-biggest cricket talking point of the past week (a controversy, a player
-return, a series wrap-up) — but say so explicitly in the `premise` field so
-the reviewer knows.
+RECENCY IS NON-NEGOTIABLE. If your first search returns only matches more
+than 7 days old, search again with different queries (try "today",
+"yesterday", specific league names, "T20I", "Test series", "BBL final",
+etc.). Do NOT silently fall back to an old marquee event like the prior
+IPL final — that produces stale shorts that look out of touch.
+
+Only if multiple searches confirm no cricket happened in the last 7 days,
+write about the biggest cricket talking point of the past week (a
+controversy, a player return, a series wrap-up) — and say so EXPLICITLY in
+the `premise` field with the phrase "no recent match — talking point".
 
 TONE & HUMOR — read this carefully:
 - Roast losing team's fans, not the players themselves (affectionate ribbing).

@@ -18,7 +18,11 @@ from google import genai
 from google.genai import types as genai_types
 from google.genai import errors as genai_errors
 
-_MODEL_CANDIDATES = ["gemini-2.5-flash-lite", "gemini-2.5-flash"]
+# Try the bigger model first for grounded prompts — flash-lite is cheap but
+# noticeably less aggressive about calling the google_search tool, which leads
+# to stale answers (the model just writes from training data instead of
+# searching). flash-lite stays as the fallback if flash hits rate limits.
+_MODEL_CANDIDATES = ["gemini-2.5-flash", "gemini-2.5-flash-lite"]
 
 _client = None
 
@@ -201,9 +205,16 @@ def generate_grounded(base_prompt: str, format_name: str) -> dict:
     save to factcheck.json for the manual-approval reviewer.
     """
     note = _GROUNDED_NOTES.get(format_name, _GROUNDED_NOTES["custom"])
-    wrapped = f"""You have access to Google Search. Use it BEFORE writing — research the
-topic, verify every factual claim against real sources, then write the script
-using ONLY facts you've verified.
+    wrapped = f"""You have access to Google Search and MUST use it for this task. Issue
+search queries BEFORE writing — your training data is stale and will produce
+wrong dates, wrong scores, and made-up matches. Do not skip the tool because
+you "think you remember" the event; the fact-checker will spot it.
+
+Concretely: call google_search at least once (more if needed) to confirm the
+specific event you're writing about happened in the requested time window
+and that every named team / player / score / date in your script matches a
+real search result. If your first query returns nothing recent, try a
+different query — don't give up after one search.
 
 FACT-CHECK RULES FOR THIS FORMAT ({format_name}):
 {note}

@@ -54,10 +54,16 @@ Verify before writing:
 - The result narrative (comeback / dominant win / late winner / draw).
 - Any specific player stat you mention (goals, assists, red cards).
 
-If you genuinely cannot find a football match in this window, fall back to
-the biggest football talking point of the past week (transfer saga, manager
-sacking, controversy) — but say so explicitly in the `premise` field so the
-reviewer knows.
+RECENCY IS NON-NEGOTIABLE. If your first search returns only matches more
+than 7 days old, search again with different queries (specific clubs,
+"yesterday", "this week", "last night Premier League", etc.). Do NOT
+silently fall back to an old marquee fixture — that produces stale shorts
+that look out of touch.
+
+Only if multiple searches confirm no top-tier football happened in the last
+7 days, write about the biggest football talking point of the past week
+(transfer saga, manager sacking, controversy) — and say so EXPLICITLY in
+the `premise` field with the phrase "no recent match — talking point".
 
 TONE & HUMOR — read this carefully:
 - Roast losing team's fans, not the players themselves (affectionate ribbing).
