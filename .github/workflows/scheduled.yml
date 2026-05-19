@@ -128,16 +128,31 @@ jobs:
           path: artifacts/
           pattern: video-*
           merge-multiple: false
-      - name: Update generation_log + quote_state
-        run: python scripts/consolidate_state.py
-      - name: Commit state changes
+      - name: Consolidate state and commit
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/quote_state.json data/generation_log.jsonl
-          if ! git diff --cached --quiet 2>/dev/null; then
+          # main can advance under us while the video matrix runs (other
+          # workflows commit logs too). Rather than rebase an append-only
+          # JSONL — which conflicts on every concurrent append — we re-derive
+          # state on top of the latest remote each attempt: hard-reset to
+          # origin/main, re-run consolidate_state.py (it reads the local
+          # untracked artifacts/ dir, which reset doesn't touch, and appends
+          # cleanly), then commit + push. Worst case it's a fast-forward.
+          for i in 1 2 3 4 5; do
+            git fetch origin main --quiet
+            git reset --hard origin/main --quiet
+            python scripts/consolidate_state.py
+            git add data/quote_state.json data/generation_log.jsonl
+            if git diff --cached --quiet 2>/dev/null; then
+              echo "no state changes to commit"
+              break
+            fi
             git commit -m "chore: advance state + record generation history"
-            git push
-          else
-            echo "no state changes to commit"
-          fi
+            if git push; then
+              echo "pushed state changes"
+              break
+            fi
+            echo "push conflict, retrying ($i/5)..."
+            sleep $((RANDOM % 4 + 1))
+          done
