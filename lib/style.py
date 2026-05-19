@@ -72,9 +72,9 @@ WRITING_RULES = """\
        ["the entire universe is made of atoms which means that..."]
        ["you", "the"]
 
-9. B-ROLL VISUAL QUERIES — return MULTIPLE.
+9. B-ROLL VISUAL QUERIES — return MULTIPLE, and make them VISUALLY LOUD.
    In your JSON output, ALSO include a "visual_queries" field: an ORDERED
-   list of 3-8 distinct 2-3-word Pexels stock-footage search queries, one
+   list of 3-8 distinct 2-4-word Pexels stock-footage search queries, one
    per BEAT of your script. The list order must follow the script's flow:
        index 0  → hook / opening
        index 1  → setup
@@ -82,10 +82,25 @@ WRITING_RULES = """\
        last     → closer / payoff
    Use 3 queries for slow/contemplative scripts (quote, ASMR), 5-6 for
    typical pacing, 7-8 for fast/dense scripts (jokes, sports recaps).
+
+   This is a SHORT competing for attention in a fast-scrolling feed — the
+   footage must be eye-catching and a little unexpected, NOT flat corporate
+   stock. For each beat, pick the most cinematic, high-energy angle:
+     - Favor MOTION: slow-motion, time-lapse, drone / aerial, fast tracking
+       shots, things pouring / shattering / exploding / swirling / igniting.
+     - Favor DRAMA & TEXTURE: neon light, storms, fire, rain, city at night,
+       crowds, dramatic shadows, macro close-ups, abstract liquid / smoke /
+       ink, glitch, light leaks.
+     - AVOID flat, static, corporate footage: "office workers", "business
+       meeting", "person typing", plain headshots, plain wide landscapes.
+   Boring → better:
+       "city street"      →  "neon city night rain"
+       "person thinking"  →  "slow motion face closeup"
+       "money"            →  "cash falling slow motion"
+       "ocean"            →  "drone over crashing waves"
    Each query must be VISUALLY DIFFERENT from the others — do NOT return
-   five variations of "person running" or "city night". Pick concrete
-   nouns + actions that Pexels actually has footage of (e.g. "sunrise
-   mountain", "coffee pouring", "office workers", "lightning storm").
+   five variations of one idea. Each must be concrete enough that Pexels
+   realistically has footage (a concrete noun + a motion or mood word).
    The old singular "visual_query" field is no longer used — return
    "visual_queries" instead.
 """

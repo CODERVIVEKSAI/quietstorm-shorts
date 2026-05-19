@@ -71,8 +71,11 @@ def _download_one(query: str, out_path: Path, used_ids: set[int] | None = None) 
     `used_ids`. Returns the Pexels video id on success (so the caller can
     track it), or None if no usable clip was found."""
     used_ids = used_ids or set()
-    pages = [1, 2, 3]
-    random.shuffle(pages)
+    # Try pages 1-5 in random order. per_page=15 → up to ~75 candidate clips
+    # per query, and the random page is the main reason two runs with the
+    # same query don't land on the same footage. Sparse queries just fall
+    # through to whichever page actually has results.
+    pages = random.sample(range(1, 6), 5)
     for page in pages:
         videos = _search(query, page=page)
         if not videos:
